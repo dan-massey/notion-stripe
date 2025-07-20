@@ -1,0 +1,60 @@
+{
+  "id": "com.massey-consulting.notion-sync",
+  "version": "0.0.10",
+  "name": "Sync with Notion",
+  "icon": "",
+  "permissions": [
+    {
+      "permission": "event_read",
+      "purpose": "Read webhook event data"
+    },
+    {
+      "permission": "customer_read",
+      "purpose": "Read customer data"
+    },
+    {
+      "permission": "dispute_read",
+      "purpose": "Read dispute data"
+    },
+    {
+      "permission": "invoice_read",
+      "purpose": "Read invoices"
+    },
+    {
+      "permission": "quote_read",
+      "purpose": "Read quotes"
+    },
+    {
+      "permission": "secret_write",
+      "purpose": "Store credentials for API calls"
+    },
+    {
+      "permission": "charge_read",
+      "purpose": "Read charge details"
+    }
+  ],
+  "connect_permissions": null,
+  "ui_extension": {
+    "views": [
+      {
+        "viewport": "settings",
+        "component": "AppSettings"
+      }
+    ],
+    "content_security_policy": {
+      "connect-src": [
+        "https://willing-grub-included.ngrok-free.app/stripe",
+        "https://willing-grub-included.ngrok-free.app/stripe/"
+      ],
+      "image-src": null,
+      "purpose": ""
+    }
+  },
+  "post_install_action": {
+    "type": "settings",
+    "url": ""
+  },
+  "stripe_api_access_type": "platform",
+  "distribution_type": "public",
+  "sandbox_install_compatible": true
+}
