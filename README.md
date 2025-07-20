@@ -1,3 +1,60 @@
+# Notion-Stripe Integration Monorepo
+
+This project uses **npm workspaces** to manage shared TypeScript types between the Stripe App frontend and Cloudflare Worker backend.
+
+## Project Structure
+
+```
+notion-stripe/
+├── package.json              # Root workspace configuration
+├── stripe-app/               # Stripe App (React frontend)
+│   ├── package.json          # @notion-stripe/stripe-app
+│   └── src/
+└── worker/                   # Cloudflare Worker (backend)
+    ├── package.json          # @notion-stripe/worker
+    └── src/
+```
+
+## Workspace Setup
+
+After cloning, install all dependencies:
+```bash
+npm install
+```
+
+This installs dependencies for both packages and sets up workspace linking.
+
+## Sharing Types Between Packages
+
+The Stripe App can import types directly from the worker:
+
+```typescript
+// In stripe-app/src/
+import { ApiRequest, ApiResponse } from '@notion-stripe/worker/src/types';
+import { StripeWebhookPayload } from '@notion-stripe/worker/src/handlers/stripe';
+```
+
+## Development Commands
+
+### Individual Package Commands (still work as before)
+```bash
+# In stripe-app/
+cd stripe-app && npm run lint
+cd stripe-app && npm run test
+
+# In worker/
+cd worker && npm run dev
+cd worker && npm run deploy
+```
+
+### Root-Level Convenience Commands
+```bash
+npm run dev:worker          # Start worker development
+npm run lint:stripe-app     # Lint stripe app
+npm run test:stripe-app     # Test stripe app  
+npm run deploy:worker       # Deploy worker
+```
+
 ## Frontend
 Stripe App served by Stripe.
 

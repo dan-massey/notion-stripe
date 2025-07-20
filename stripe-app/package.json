@@ -1,12 +1,13 @@
 {
-  "name": "com.massey-consulting.notion",
+  "name": "@notion-stripe/stripe-app",
   "version": "0.0.1",
   "description": "Test",
   "private": true,
   "license": "~~proprietary~~",
   "dependencies": {
     "@stripe/ui-extension-sdk": "^8.10.0",
-    "stripe": "^13.11.0"
+    "stripe": "^13.11.0",
+    "@notion-stripe/worker": "*"
   },
   "engines": {
     "node": ">=14"

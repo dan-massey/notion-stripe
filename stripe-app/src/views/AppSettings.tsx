@@ -1,55 +1,20 @@
 import {
   Box,
-  Icon,
-  Inline,
-  Link,
   SettingsView,
   Button,
 } from "@stripe/ui-extension-sdk/ui";
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import type { ExtensionContextValue } from "@stripe/ui-extension-sdk/context";
-import { makeApiRequest } from "../utils/api";
+import { ApiProvider, useApi } from "@/services/apiProvider";
+import type { ResponseForEndpoint } from "@worker/stripe-frontend-endpoints";
 
-type Membership = {
-  stripeSubscriptionStatus?: string | undefined;
-  stripeCustomerId?: string | undefined;
-  stripeSubscriptionId?: string | undefined;
-  trialEnd?: number | null | undefined;
-  cancelAt?: number | null | undefined;
-  stripeAccountId: string;
-  stripeMode: "live" | "test" | "sandbox";
-};
-
-type MembershipResponse =
-  | {
-      checkoutUrl: string;
-      stripeMode: never;
-      stripeAccountId: never;
-      stripeUserId: never;
-      membership: never;
-      manageSubscriptionUrl: never;
-    }
-  | {
-      checkoutUrl: never;
-      stripeMode: "live" | "test" | "sandbox";
-      stripeAccountId: string;
-      stripeUserId: string;
-      membership: Membership;
-      manageSubscriptionUrl: string;
-    };
-
-const AppSettings = ({ userContext, environment }: ExtensionContextValue) => {
-  const [membership, setMembership] = useState<MembershipResponse | null>(null);
+const AppSettingsContent = () => {
+  const { postTyped, getTyped, userContext } = useApi();
+  const [membership, setMembership] = useState<ResponseForEndpoint<"/stripe/membership"> | null>(null);
+  
   const getMembershipStatus = async () => {
-    const response = await makeApiRequest(
-      "stripe/membership",
-      {},
-      userContext,
-      environment
-    );
-    const body: MembershipResponse = await response.json();
-    setMembership(body);
-    console.log(body);
+    const response = await getTyped("/stripe/membership");
+    setMembership(response);
   };
 
   return (
@@ -61,22 +26,26 @@ const AppSettings = ({ userContext, environment }: ExtensionContextValue) => {
           padding: "large",
         }}
       >
-        <Button
-          onPress={() => makeApiRequest("stripe", {}, userContext, environment)}
-        >
+        <Button onPress={() => postTyped("/stripe")}>
           Send test request
         </Button>
 
         <Button onPress={getMembershipStatus}>Get membership info</Button>
-        {membership?.checkoutUrl ? <Box>{membership.checkoutUrl + "?client_reference_id=" + userContext.account.id}</Box> : null}
+        {membership?.checkoutUrl ? (
+          <Box>
+            {membership.checkoutUrl +
+              "?client_reference_id=" +
+              userContext.account.id}
+          </Box>
+        ) : null}
         {membership?.membership ? (
           <Box>
             <Box>
-              <Box>Status: {membership.membership.stripeSubscriptionStatus}</Box>
-              <Box>Manage subscription: {membership.manageSubscriptionUrl}</Box>
               <Box>
-                Customer ID: {membership.membership.stripeCustomerId}
+                Status: {membership.membership.stripeSubscriptionStatus}
               </Box>
+              <Box>Manage subscription: {membership.manageSubscriptionUrl}</Box>
+              <Box>Customer ID: {membership.membership.stripeCustomerId}</Box>
               <Box>
                 Subscription ID: {membership.membership.stripeSubscriptionId}
               </Box>
@@ -87,6 +56,18 @@ const AppSettings = ({ userContext, environment }: ExtensionContextValue) => {
         ) : null}
       </Box>
     </SettingsView>
+  );
+};
+
+const AppSettings = ({ userContext, environment }: ExtensionContextValue) => {
+  return (
+    <ApiProvider
+      userContext={userContext}
+      environment={environment}
+      apiUrl="https://willing-grub-included.ngrok-free.app"
+    >
+      <AppSettingsContent />
+    </ApiProvider>
   );
 };
 
