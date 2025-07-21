@@ -11,7 +11,7 @@ export const notionMiddleware = createMiddleware<Env>(async (c, next) => {
   const notion = new Notion(
     NOTION_OAUTH_CLIENT_ID!,
     NOTION_OAUTH_CLIENT_SECRET!,
-    NOTION_AUTH_URL || "https://46be97540eea.ngrok-free.app/auth/callback"
+    NOTION_AUTH_URL || " https://willing-grub-included.ngrok-free.app/auth/callback"
   );
   c.set("notionAuth", notion);
   await next();

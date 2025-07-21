@@ -56,5 +56,8 @@
   },
   "stripe_api_access_type": "platform",
   "distribution_type": "public",
-  "sandbox_install_compatible": true
+  "sandbox_install_compatible": true,
+  "constants": {
+    "API_BASE": "https://willing-grub-included.ngrok-free.app"
+  }
 }

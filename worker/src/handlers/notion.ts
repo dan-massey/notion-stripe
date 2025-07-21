@@ -1,15 +1,18 @@
 import { getCookie, setCookie, deleteCookie } from "hono/cookie";
+import type { AppContext, StripeMode } from "@/types";
+import { makeStripeClient } from "@/utils/stripe";
+import type { NotionSecretName } from "@/stripe-frontend-endpoints";
 import { generateState } from "arctic";
-import { createFactory } from "hono/factory";
-import type { Env } from "@/types";
 
-// Create a factory with your Env type
-const factory = createFactory<Env>();
-
-export const createAuthLink = factory.createHandlers(async (c) => {
+export const redirectToNotionAuth = async (c: AppContext) => {
   const state = generateState();
   const url = c.get("notionAuth").createAuthorizationURL(state);
-  const accountId = c.req.query("account_id") || "";
+  const accountId = c.req.query("account_id") as string;
+  const stripeMode = c.req.query("mode") as StripeMode;
+
+  if (!accountId || !stripeMode) {
+    return c.text("Missing account_id or mode parameter", 400);
+  }
 
   // Store state in a cookie or session
   const cookieOptions = {
@@ -19,13 +22,14 @@ export const createAuthLink = factory.createHandlers(async (c) => {
   } as const;
   setCookie(c, "oauth_state", state, cookieOptions);
   setCookie(c, "account_id", accountId, cookieOptions);
-  console.log(url.toString());
+  setCookie(c, "mode", stripeMode, cookieOptions);
 
   return c.redirect(url.toString());
-});
+}
 
-export const notionAuthCallback = factory.createHandlers(async (c) => {
- const code = c.req.query("code");
+
+export const notionAuthCallback = async (c: AppContext) => {
+  const code = c.req.query("code");
   const state = c.req.query("state");
 
   if (!code || !state) {
@@ -34,6 +38,8 @@ export const notionAuthCallback = factory.createHandlers(async (c) => {
 
   // Verify state matches what you stored
   const storedState = getCookie(c, "oauth_state");
+  console.log("Stored state:", storedState);
+  console.log("Received state:", state);
   if (state !== storedState) {
     return c.text("Invalid state", 400);
   }
@@ -42,6 +48,7 @@ export const notionAuthCallback = factory.createHandlers(async (c) => {
     const tokens = await c.get("notionAuth").validateAuthorizationCode(code);
 
     console.log("Account ID:", getCookie(c, "account_id"));
+    console.log("Mode:", getCookie(c, "mode"));
     console.log("Tokens:", tokens);
 
     // OAuth2Tokens {
@@ -59,8 +66,42 @@ export const notionAuthCallback = factory.createHandlers(async (c) => {
     //   }
     // }
 
+    const stripe = makeStripeClient(
+      c,
+      (getCookie(c, "mode") || "test") as StripeMode
+    );
+    const secretName: NotionSecretName = "NOTION_AUTH_TOKEN";
+    const accessToken = tokens.accessToken();
+
+    await stripe.apps.secrets.create(
+      {
+        name: secretName,
+        payload: accessToken,
+        scope: {
+          type: "account",
+        },
+      },
+      {
+        stripeAccount: getCookie(c, "account_id"),
+      }
+    );
+
     // Clear the state cookie
     deleteCookie(c, "oauth_state", {
+      httpOnly: true,
+      secure: true,
+      sameSite: "Lax",
+      maxAge: 0,
+    });
+
+    deleteCookie(c, "account_id", {
+      httpOnly: true,
+      secure: true,
+      sameSite: "Lax",
+      maxAge: 0,
+    });
+
+    deleteCookie(c, "mode", {
       httpOnly: true,
       secure: true,
       sameSite: "Lax",
@@ -76,4 +117,4 @@ export const notionAuthCallback = factory.createHandlers(async (c) => {
     console.error("OAuth callback error:", error);
     return c.text("Authentication failed", 400);
   }
-});
+};
