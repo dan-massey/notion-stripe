@@ -6,7 +6,7 @@ import {
   Link,
   Spinner,
 } from "@stripe/ui-extension-sdk/ui";
-import { useMembership } from "@/services/membershipProvider";
+import { useAccount } from "@/services/accountProvider";
 
 interface SubscriptionBannerProps {
   children: ReactNode;
@@ -15,7 +15,7 @@ interface SubscriptionBannerProps {
 export const SubscriptionBanner: React.FC<SubscriptionBannerProps> = ({ 
   children 
 }) => {
-  const { membership, loading, error, refetch } = useMembership();
+  const { account, loading, error, refetch } = useAccount();
 
   if (loading) {
     return (
@@ -29,7 +29,7 @@ export const SubscriptionBanner: React.FC<SubscriptionBannerProps> = ({
     return <Box>Error: {error}</Box>;
   }
   
-  if (!membership?.membership?.stripeSubscriptionStatus) {
+  if (!account?.membership?.stripeSubscriptionStatus) {
     return (
       <Box>
         <Banner
@@ -37,7 +37,7 @@ export const SubscriptionBanner: React.FC<SubscriptionBannerProps> = ({
           title="Get Started For Free"
           actions={
             <Box css={{ gap: "small" }}>
-              <Link href={membership?.checkoutUrl} external={true} target="_blank">
+              <Link href={account?.checkoutUrl} external={true} target="_blank">
                 Start your free trial
               </Link>
               <Button onPress={refetch}>Refresh</Button>
@@ -49,7 +49,7 @@ export const SubscriptionBanner: React.FC<SubscriptionBannerProps> = ({
     );
   }
 
-  if (!membership) {
+  if (!account) {
     return (
       <Box>
         <Button onPress={refetch}>Refresh</Button>

@@ -31,7 +31,7 @@ interface NotionSignInProviderProps {
 export const NotionSignInProvider: React.FC<NotionSignInProviderProps> = ({
   children,
 }) => {
-  const { getTyped } = useApi();
+  const { getTyped, postTyped } = useApi();
 
   // Authentication state
   const [isSignedIn, setIsSignedIn] = useState(false);
@@ -86,12 +86,7 @@ export const NotionSignInProvider: React.FC<NotionSignInProviderProps> = ({
     try {
       setIsLoading(true);
       setAuthError(null);
-      await stripe.apps.secrets.deleteWhere({
-        name: notionSecretName,
-        scope: {
-          type: "account",
-        }
-      });
+      await postTyped("/stripe/notion-auth/delete");
       setIsSignedIn(false);
     } catch (err) {
       setAuthError(err instanceof Error ? err.message : "Failed to sign out");

@@ -1,6 +1,8 @@
 import { Stripe } from "stripe";
 import { HTTPException } from "hono/http-exception";
 import type { AppContext, StripeMode } from "@/types";
+import { NotionSecretName } from "@/stripe-frontend-endpoints";
+const NOTION_SECRET_NAME: NotionSecretName = "NOTION_AUTH_TOKEN";
 
 export const makeStripeClient = (c: AppContext, mode: StripeMode) => {
   if (mode === "live") {
@@ -16,6 +18,51 @@ export const makeStripeClient = (c: AppContext, mode: StripeMode) => {
     typescript: true,
   });
 };
+
+export const getNotionToken = async (
+  c: AppContext
+): Promise<string | null | undefined> => {
+  const stripe = c.get("stripe");
+
+  try {
+    const notionSecret = await stripe.apps.secrets.find(
+      {
+        name: NOTION_SECRET_NAME,
+        scope: {
+          type: "account",
+        },
+        expand: ["payload"],
+      },
+      {
+        stripeAccount: c.get("stripeAccountId"),
+      }
+    );
+    return notionSecret.payload;
+  } catch (e) {
+    return null;
+  }
+};
+
+export const deleteNotionToken = async (c: AppContext) => {
+  const stripe = c.get("stripe");
+  try {
+    const notionSecret = await stripe.apps.secrets.deleteWhere(
+      {
+        name: NOTION_SECRET_NAME,
+        scope: {
+          type: "account",
+        },
+      },
+      {
+        stripeAccount: c.get("stripeAccountId"),
+      }
+    );
+    return notionSecret;
+  } catch (e) {
+    return null;
+  }
+}
+
 
 export const createEvent = async (
   stripe: Stripe,

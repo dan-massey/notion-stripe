@@ -2,11 +2,20 @@
 // This is because the stripe-app imports types from this file, and TypeScript
 // cross-compilation fails when the stripe-app tries to resolve the worker's @/ paths.
 // Using relative imports keeps this file self-contained for cross-workspace usage.
-import type { MembershipResponse } from "./handlers/stripe/membership";
 import type { HelloWorldResponse } from "./handlers/stripe/helloworld";
-import type { NotionPagesResponse } from "./handlers/stripe/notion";
+import type { DatabaseSetupResponse, DatabaseClearResponse } from "./handlers/stripe/notion";
+import type { SearchResult } from "./utils/notion";
+import type { StripeMode } from "./types";
+import type { MembershipStatus } from "./membership-do";
 
-
+export type MembershipResponse = {
+  checkoutUrl: string;
+  stripeMode?: StripeMode;
+  stripeAccountId?: string;
+  stripeUserId?: string;
+  membership?: MembershipStatus;
+  manageSubscriptionUrl?: string;
+};
 
 export const ENDPOINTS = {
   helloworld: {
@@ -27,7 +36,22 @@ export const ENDPOINTS = {
   notionPages: {
     path: "/stripe/notion/pages",
     methods: ["GET"],
-    response: {} as NotionPagesResponse,
+    response: {} as SearchResult,
+  },
+  setUpDatabases: {
+    path: "/stripe/notion/databases",
+    methods: ["POST"],
+    response: {} as DatabaseSetupResponse,
+  },
+  clearDatabases: {
+    path: "/stripe/notion/databases/clear",
+    methods: ["POST"],
+    response: {} as DatabaseClearResponse,
+  },
+  deleteNotionAuth: {
+    path: "/stripe/notion-auth/delete",
+    methods: ["POST"],
+    response: {} as { message: string },
   }
 } as const;
 

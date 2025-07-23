@@ -58,6 +58,6 @@ export const handleCheckoutComplete = async (
     stripeSubscriptionStatus: subscriptionStatus,
     trialEnd: trialEnd,
     cancelAt: cancelAt,
-    stripeMode: mode,
+    stripeMode: mode
   });
 };

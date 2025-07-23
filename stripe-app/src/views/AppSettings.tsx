@@ -1,9 +1,59 @@
 import type { ExtensionContextValue } from "@stripe/ui-extension-sdk/context";
 import { ApiProvider } from "@/services/apiProvider";
-import { MembershipProvider } from "@/services/membershipProvider";
+import { AccountProvider } from "@/services/accountProvider";
 import { NotionSignInProvider } from "@/services/notionSignInProvider";
 import { NotionSignIn } from "@/components/NotionSignIn";
-import { NotionPages } from "@/components/NotionPages";
+import { NotionPageSelector } from "@/components/NotionPageSelector";
+import { NotionDatabasesLinked } from "@/components/NotionDatabasesLinked";
+import { Box } from "@stripe/ui-extension-sdk/ui";
+import { useNotionSignIn } from "@/services/notionSignInProvider";
+import { useAccount } from "@/services/accountProvider";
+import { Placeholder } from "@/components/Placeholder";
+import { Subscribe } from "@/components/Subscribe";
+import { ManageSubscription } from "@/components/ManageSubscription";
+
+const AppSettingsContent = () => {
+  const { isSignedIn } = useNotionSignIn();
+  const { account } = useAccount();
+
+  const getStepTwo = () => {
+    if (account?.membership?.parentPageId) {
+      return <NotionDatabasesLinked />;
+    }
+
+    return <NotionPageSelector />;
+  };
+
+  const getStepThree = () => {
+    if (account?.manageSubscriptionUrl) {
+      return <ManageSubscription />;
+    } else {
+      return <Subscribe />;
+    }
+  }
+
+  return (
+    <Box css={{ stack: "y", width: "fill", gap: "medium" }}>
+      <Box css={{ width: "fill"}}>
+        <NotionSignIn />
+      </Box>
+      <Box css={{ width: "fill"}}>
+        {isSignedIn ? (
+          getStepTwo()
+        ) : (
+          <Placeholder step="Step 2" title="Create Databases" />
+        )}
+      </Box>
+      <Box css={{ width: "fill" }}>
+        {(account?.membership?.parentPageId || account?.manageSubscriptionUrl) ? (
+          getStepThree()
+        ) : (
+          <Placeholder step="Step 3" title="Set up Billing (14 day free trial)" />
+        )}
+      </Box>
+    </Box>
+  );
+};
 
 const AppSettings = ({ userContext, environment }: ExtensionContextValue) => {
   return (
@@ -12,12 +62,11 @@ const AppSettings = ({ userContext, environment }: ExtensionContextValue) => {
       environment={environment}
       apiUrl="https://willing-grub-included.ngrok-free.app"
     >
-      <MembershipProvider>
+      <AccountProvider>
         <NotionSignInProvider>
-          <NotionSignIn />
-          <NotionPages />
+          <AppSettingsContent />
         </NotionSignInProvider>
-      </MembershipProvider>
+      </AccountProvider>
     </ApiProvider>
   );
 };

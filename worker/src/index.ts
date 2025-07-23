@@ -15,7 +15,7 @@ import {
 import { helloWorldHandler } from "@/handlers/stripe/helloworld";
 import { stripeWebhookHandler } from "@/handlers/stripe/webhook";
 import { getMembership } from "@/handlers/stripe/membership";
-import { getNotionLink, getNotionPages } from "@/handlers/stripe/notion";
+import { clearDatabaseLinks, deleteNotionAuth, getNotionLink, getNotionPages, setUpDatabases } from "@/handlers/stripe/notion";
 
 import { membershipWebhookHandler } from "@/handlers/membership-webhook";
 import { redirectToNotionAuth } from "@/handlers/notion";
@@ -39,6 +39,10 @@ app.post(ENDPOINTS.helloworld.path, helloWorldHandler);
 app.get(ENDPOINTS.membership.path, getMembership);
 app.get(ENDPOINTS.notionLink.path, getNotionLink);
 app.get(ENDPOINTS.notionPages.path, getNotionPages);
+app.post(ENDPOINTS.setUpDatabases.path, setUpDatabases);
+app.post(ENDPOINTS.deleteNotionAuth.path, deleteNotionAuth);
+app.post(ENDPOINTS.clearDatabases.path, clearDatabaseLinks);
+
 // Webhooks from Stripe:
 app.post(
   "/webhook/:mode{test|live|sandbox}/stripe",

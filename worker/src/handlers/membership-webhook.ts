@@ -1,5 +1,6 @@
 import { makeStripeClient } from "@/utils/stripe";
 import { handleCheckoutComplete } from "@/utils/membership";
+import { getMembershipDo } from "@/utils/do";
 import type { Stripe } from "stripe";
 import type { AppContext, StripeMode } from "@/types";
 
@@ -30,8 +31,7 @@ export const membershipWebhookHandler = async (c: AppContext) => {
   const stripeAccountId: string = subscription.metadata.stripeAccountId;
   const subscriptionStatus: string = subscription.status;
 
-  const id = c.env.MEMBERSHIP_DURABLE_OBJECT.idFromName(stripeAccountId);
-  const membership = c.env.MEMBERSHIP_DURABLE_OBJECT.get(id);
+  const membership = getMembershipDo(c, stripeAccountId);
 
   console.log("Updating membership status for userId:", stripeAccountId);
   console.log("Subscription status:", subscriptionStatus);
