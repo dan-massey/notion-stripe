@@ -44,17 +44,25 @@ export class MembershipDurableObject extends DurableObject<Env> {
   }
 
   async setStatus({
+    stripeAccountId,
+    stripeMode,
     stripeSubscriptionStatus,
     trialEnd,
     cancelAt,
   }: {
+    stripeAccountId: string;
+    stripeMode: StripeMode;
     stripeSubscriptionStatus: string;
     trialEnd: number | null;
     cancelAt: number | null;
   }) {
     console.log(this.membershipStatus);
     if (!this.membershipStatus) {
-      throw new Error("Membership status not found");
+      console.warn("Membership status not initialized, creating with provided account info");
+      this.membershipStatus = {
+        stripeAccountId,
+        stripeMode,
+      };
     }
 
     this.membershipStatus.stripeSubscriptionStatus = stripeSubscriptionStatus;
@@ -66,27 +74,37 @@ export class MembershipDurableObject extends DurableObject<Env> {
     return;
   }
 
-  async deleteSubscription() {
+  async deleteSubscription(stripeAccountId?: string, stripeMode?: StripeMode) {
     if (!this.membershipStatus) {
-      throw new Error("Membership status not found");
+      if (!stripeAccountId || !stripeMode) {
+        throw new Error("Membership status not found and account info not provided");
+      }
+      console.warn("Membership status not initialized, creating with provided account info");
+      this.membershipStatus = {
+        stripeAccountId,
+        stripeMode,
+      };
     }
     this.membershipStatus.stripeSubscriptionStatus = null;
     this.membershipStatus.stripeSubscriptionId = null;
     this.membershipStatus.trialEnd = null;
     this.membershipStatus.cancelAt = null;
-    this.membershipStatus.trialEnd = null;
 
     console.log("Deleting subscription in DO", this.membershipStatus);
     await this.ctx.storage.put("membershipStatus", this.membershipStatus);
   }
 
   async setNotionPages({
+    stripeAccountId,
+    stripeMode,
     parentPageId,
     customerDatabaseId,
     invoiceDatabaseId,
     chargeDatabaseId,
     subscriptionDatabaseId,
   }: {
+    stripeAccountId: string;
+    stripeMode: StripeMode;
     parentPageId: string | null;
     customerDatabaseId: string | null;
     invoiceDatabaseId: string | null;
@@ -94,8 +112,14 @@ export class MembershipDurableObject extends DurableObject<Env> {
     subscriptionDatabaseId: string | null;
   }): Promise<void> {
     if (!this.membershipStatus) {
-      throw new Error("Membership status not found");
+      console.warn("Membership status not initialized, creating with provided account info");
+      this.membershipStatus = {
+        stripeAccountId,
+        stripeMode,
+      };
     }
+    this.membershipStatus.stripeAccountId = stripeAccountId;
+    this.membershipStatus.stripeMode = stripeMode;
     this.membershipStatus.parentPageId = parentPageId;
     this.membershipStatus.customerDatabaseId = customerDatabaseId;
     this.membershipStatus.invoiceDatabaseId = invoiceDatabaseId;
@@ -105,7 +129,12 @@ export class MembershipDurableObject extends DurableObject<Env> {
   }
 
   async clearNotionPages(): Promise<void> {
+    if (!this.membershipStatus?.stripeAccountId || !this.membershipStatus?.stripeMode) {
+      return;
+    }
     await this.setNotionPages({
+      stripeAccountId: this.membershipStatus?.stripeAccountId,
+      stripeMode: this.membershipStatus?.stripeMode,
       parentPageId: null,
       customerDatabaseId: null,
       invoiceDatabaseId: null,

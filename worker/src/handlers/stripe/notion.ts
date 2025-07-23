@@ -10,7 +10,7 @@ import { customerSchema } from "@/schemas/customer";
 import { getChargeSchema } from "@/schemas/charge";
 import { getInvoiceSchema } from "@/schemas/invoice";
 import { getSubscriptionSchema } from "@/schemas/subscription";
-import { getMembershipDo } from "@/utils/do";
+import { ensureMembershipDo } from "@/utils/do";
 
 export const getNotionLink = async (c: AppContext) => {
   const notionAuthLink = `${c.env.BASE_URL}/auth/signin?account_id=${c.get(
@@ -24,8 +24,14 @@ export const deleteNotionAuth = async (c: AppContext) => {
   if (!stripeAccountId) {
     return c.json({ error: "Stripe account ID not found" }, 400);
   }
-  const membership = getMembershipDo(c, stripeAccountId);
+  const membership = await ensureMembershipDo(
+    c,
+    stripeAccountId,
+    c.get("stripeMode")
+  );
   await membership.setNotionPages({
+    stripeAccountId: stripeAccountId,
+    stripeMode: c.get("stripeMode") || "test",
     chargeDatabaseId: null,
     customerDatabaseId: null,
     invoiceDatabaseId: null,
@@ -34,7 +40,7 @@ export const deleteNotionAuth = async (c: AppContext) => {
   });
 
   try {
-    const token = await getNotionToken(c);
+    const token = await getNotionToken(c, stripeAccountId);
     !!token &&
       (await revokeToken(
         c.env.NOTION_OAUTH_CLIENT_ID,
@@ -62,7 +68,11 @@ export const clearDatabaseLinks = async (c: AppContext) => {
   if (!stripeAccountId) {
     return c.json({ error: "Stripe account ID not found" }, 400);
   }
-  const membership = getMembershipDo(c, stripeAccountId);
+  const membership = await ensureMembershipDo(
+    c,
+    stripeAccountId,
+    c.get("stripeMode")
+  );
   await membership.clearNotionPages();
 
   const resp: DatabaseClearResponse = {
@@ -76,7 +86,7 @@ export const clearDatabaseLinks = async (c: AppContext) => {
 };
 
 export const getNotionPages = async (c: AppContext) => {
-  const token = await getNotionToken(c);
+  const token = await getNotionToken(c, c.get("stripeAccountId") || "");
   if (!token) {
     return c.json({ error: "Notion auth token not found" }, 404);
   }
@@ -112,7 +122,7 @@ export type DatabaseSetupResponse = {
 };
 
 export const setUpDatabases = async (c: AppContext) => {
-  const notionToken = await getNotionToken(c);
+  const notionToken = await getNotionToken(c, c.get("stripeAccountId") || "");
   const stripeAccountId = c.get("stripeAccountId");
   if (!notionToken) {
     return c.json({ error: "Notion auth token not found" }, 404);
@@ -149,7 +159,12 @@ export const setUpDatabases = async (c: AppContext) => {
     getSubscriptionSchema(customersDb.id, invoicesDb.id)
   );
 
-  const membership = getMembershipDo(c, stripeAccountId);
+  const membership = await ensureMembershipDo(
+    c,
+    stripeAccountId,
+    c.get("stripeMode")
+  );
+
   const resp: DatabaseSetupResponse = {
     chargeDatabaseId: chargesDb.id,
     customerDatabaseId: customersDb.id,
@@ -158,7 +173,13 @@ export const setUpDatabases = async (c: AppContext) => {
     subscriptionDatabaseId: subscriptionDb.id,
   };
 
-  await membership.setNotionPages(resp);
+  await membership.setNotionPages({
+    stripeAccountId: stripeAccountId,
+    stripeMode: c.get("stripeMode") || "test",
+    ...resp,
+  });
+
+  console.log(await membership.getStatus());
 
   return c.json(resp);
 };

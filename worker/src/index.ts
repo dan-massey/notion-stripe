@@ -12,10 +12,9 @@ import {
   stripeWebhookMiddleware,
 } from "@/middleware/stripe";
 
-import { helloWorldHandler } from "@/handlers/stripe/helloworld";
+
 import { stripeWebhookHandler } from "@/handlers/stripe/webhook";
-import { getMembership } from "@/handlers/stripe/membership";
-import { clearDatabaseLinks, deleteNotionAuth, getNotionLink, getNotionPages, setUpDatabases } from "@/handlers/stripe/notion";
+
 
 import { membershipWebhookHandler } from "@/handlers/membership-webhook";
 import { redirectToNotionAuth } from "@/handlers/notion";
@@ -34,14 +33,16 @@ app.get("/message", (c) => {
 // Stripe frontend API endpoints:
 // The content-security-policy in the Stripe App can only make requests that start with /stripe
 app.use("/stripe/*", stripeFrontendMiddleware);
-app.post(ENDPOINTS.membership.path, getMembership);
-app.post(ENDPOINTS.helloworld.path, helloWorldHandler);
-app.get(ENDPOINTS.membership.path, getMembership);
-app.get(ENDPOINTS.notionLink.path, getNotionLink);
-app.get(ENDPOINTS.notionPages.path, getNotionPages);
-app.post(ENDPOINTS.setUpDatabases.path, setUpDatabases);
-app.post(ENDPOINTS.deleteNotionAuth.path, deleteNotionAuth);
-app.post(ENDPOINTS.clearDatabases.path, clearDatabaseLinks);
+
+// Stripe frontend endpoints are defined in the ENDPOINTS const and added programatically.
+Object.values(ENDPOINTS).forEach((endpointInfo) => {
+  if (endpointInfo.methods.includes("POST")) {
+    app.post(endpointInfo.path, endpointInfo.handler);
+  }
+  if (endpointInfo.methods.includes("GET")) {
+    app.get(endpointInfo.path, endpointInfo.handler);
+  }
+});
 
 // Webhooks from Stripe:
 app.post(

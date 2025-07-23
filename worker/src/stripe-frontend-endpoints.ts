@@ -7,6 +7,9 @@ import type { DatabaseSetupResponse, DatabaseClearResponse } from "./handlers/st
 import type { SearchResult } from "./utils/notion";
 import type { StripeMode } from "./types";
 import type { MembershipStatus } from "./membership-do";
+import { clearDatabaseLinks, deleteNotionAuth, getNotionLink, getNotionPages, setUpDatabases } from "@/handlers/stripe/notion";
+import { getMembership } from "@/handlers/stripe/membership";
+import { helloWorldHandler } from "@/handlers/stripe/helloworld";
 
 export type MembershipResponse = {
   checkoutUrl: string;
@@ -17,41 +20,55 @@ export type MembershipResponse = {
   manageSubscriptionUrl?: string;
 };
 
-export const ENDPOINTS = {
+type EndpointInfo = {
+  path: `/stripe/${string}`,
+  methods: Array<"POST"|"GET">,
+  response: any,
+  handler: any
+}
+
+export const ENDPOINTS: Record<string, EndpointInfo> = {
   helloworld: {
     path: "/stripe/helloworld",
     methods: ["POST"],
     response: {} as HelloWorldResponse,
+    handler: helloWorldHandler
   },
   membership: {
     path: "/stripe/membership",
     methods: ["GET", "POST"],
     response: {} as MembershipResponse,
+    handler: getMembership
   },
   notionLink: {
     path: "/stripe/notion-auth/link",
     methods: ["GET"],
     response: {} as { url: string },
+    handler: getNotionLink
   },
   notionPages: {
     path: "/stripe/notion/pages",
     methods: ["GET"],
     response: {} as SearchResult,
+    handler: getNotionPages
   },
   setUpDatabases: {
     path: "/stripe/notion/databases",
     methods: ["POST"],
     response: {} as DatabaseSetupResponse,
+    handler: setUpDatabases
   },
   clearDatabases: {
     path: "/stripe/notion/databases/clear",
     methods: ["POST"],
     response: {} as DatabaseClearResponse,
+    handler: clearDatabaseLinks
   },
   deleteNotionAuth: {
     path: "/stripe/notion-auth/delete",
     methods: ["POST"],
     response: {} as { message: string },
+    handler: deleteNotionAuth
   }
 } as const;
 

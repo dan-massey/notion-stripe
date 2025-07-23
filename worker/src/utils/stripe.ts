@@ -20,7 +20,8 @@ export const makeStripeClient = (c: AppContext, mode: StripeMode) => {
 };
 
 export const getNotionToken = async (
-  c: AppContext
+  c: AppContext,
+  stripeAccountId: string,
 ): Promise<string | null | undefined> => {
   const stripe = c.get("stripe");
 
@@ -34,7 +35,7 @@ export const getNotionToken = async (
         expand: ["payload"],
       },
       {
-        stripeAccount: c.get("stripeAccountId"),
+        stripeAccount: stripeAccountId,
       }
     );
     return notionSecret.payload;

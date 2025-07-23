@@ -1,6 +1,6 @@
 import { makeStripeClient } from "@/utils/stripe";
 import { handleCheckoutComplete } from "@/utils/membership";
-import { getMembershipDo } from "@/utils/do";
+import { ensureMembershipDo } from "@/utils/do";
 import type { Stripe } from "stripe";
 import type { AppContext, StripeMode } from "@/types";
 
@@ -31,7 +31,7 @@ export const membershipWebhookHandler = async (c: AppContext) => {
   const stripeAccountId: string = subscription.metadata.stripeAccountId;
   const subscriptionStatus: string = subscription.status;
 
-  const membership = getMembershipDo(c, stripeAccountId);
+  const membership = await ensureMembershipDo(c, stripeAccountId, mode);
 
   console.log("Updating membership status for userId:", stripeAccountId);
   console.log("Subscription status:", subscriptionStatus);
@@ -39,9 +39,11 @@ export const membershipWebhookHandler = async (c: AppContext) => {
   console.log("Subscription cancel at:", subscription.cancel_at);
 
   if (subscriptionStatus === "canceled") {
-    await membership.deleteSubscription();
+    await membership.deleteSubscription(stripeAccountId, mode);
   } else {
     await membership.setStatus({
+      stripeAccountId,
+      stripeMode: mode,
       stripeSubscriptionStatus: subscriptionStatus,
       trialEnd: subscription.trial_end,
       cancelAt: subscription.cancel_at,

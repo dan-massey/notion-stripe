@@ -1,6 +1,6 @@
 {
   "id": "com.massey-consulting.notion-sync",
-  "version": "0.0.10",
+  "version": "0.0.11",
   "name": "Sync with Notion",
   "icon": "",
   "permissions": [
@@ -54,10 +54,10 @@
     "type": "settings",
     "url": ""
   },
-  "stripe_api_access_type": "platform",
-  "distribution_type": "public",
-  "sandbox_install_compatible": true,
   "constants": {
     "API_BASE": "https://willing-grub-included.ngrok-free.app"
-  }
+  },
+  "stripe_api_access_type": "platform",
+  "distribution_type": "public",
+  "sandbox_install_compatible": true
 }

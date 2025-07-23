@@ -24,7 +24,7 @@ export const NotionSignIn = () => {
         <Box css={{ font: "subheading" }}>Step 1</Box>
         <Box css={{ stack: "y", distribute: "space-between", alignY: "top" }}>
           {isLoading ? (
-            <Box css={{ stack: "y", gapX: "small", alignY: "center" }}>
+            <Box css={{ stack: "y", gapY: "small", alignY: "center" }}>
               <Box css={{ font: "heading" }}>Connect Stripe to Notion</Box>
               <Box>
               <Spinner size="small" /> Loading...

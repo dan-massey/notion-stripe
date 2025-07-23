@@ -1,5 +1,5 @@
 import type { AppContext, StripeMode } from "@/types";
-import { getMembershipDo } from "@/utils/do";
+import { ensureMembershipDo } from "@/utils/do";
 import type { MembershipResponse } from "@/stripe-frontend-endpoints";
 const checkoutLinks = {
   test: "https://buy.stripe.com/test_bJe9ASfRtdBXd6CeDbc3m00",
@@ -18,7 +18,7 @@ export const getMembership = async (c: AppContext) => {
     return c.json({ message: "Stripe account ID not found" }, 400);
   }
 
-  const membership = getMembershipDo(c, stripeAccountId);
+  const membership = await ensureMembershipDo(c, stripeAccountId, mode);
   const membershipData = await membership.getStatus();
 
   let resp: MembershipResponse = {
@@ -26,10 +26,6 @@ export const getMembership = async (c: AppContext) => {
     membership: membershipData
   };
   if (!membershipData || !membershipData.stripeCustomerId) {
-    await membership.setUp({
-      stripeAccountId: stripeAccountId,
-      stripeMode: mode,
-    });
     return c.json(resp);
   }
 
@@ -53,11 +49,12 @@ export const getMembership = async (c: AppContext) => {
 
 export const getMembershipStatus = async (c: AppContext) => {
   const stripeAccountId = c.get("stripeAccountId");
+  const mode = c.get("stripeMode");
   if (!stripeAccountId) {
     return c.json({ message: "Stripe account ID not found" }, 400);
   }
 
-  const membership = getMembershipDo(c, stripeAccountId);
+  const membership = await ensureMembershipDo(c, stripeAccountId, mode);
   const status = await membership.getStatus();
 
   return c.json({ status });

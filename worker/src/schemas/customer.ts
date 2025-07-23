@@ -22,7 +22,7 @@ export const customerSchema: CreateDatabaseParameters["properties"] = {
   "Balance": {
     "type": "number" as const,
     "number": {
-      "format": "dollar" as const
+      "format": "number" as const
     }
   },
   "Currency": {
