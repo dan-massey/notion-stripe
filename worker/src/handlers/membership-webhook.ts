@@ -38,11 +38,17 @@ export const membershipWebhookHandler = async (c: AppContext) => {
   console.log("Subscription trial end:", subscription.trial_end);
   console.log("Subscription cancel at:", subscription.cancel_at);
 
-  await membership.setStatus({
-    stripeSubscriptionStatus: subscriptionStatus,
-    trialEnd: subscription.trial_end,
-    cancelAt: subscription.cancel_at,
-  });
+  if (subscriptionStatus === "canceled") {
+    await membership.deleteSubscription();
+  } else {
+    await membership.setStatus({
+      stripeSubscriptionStatus: subscriptionStatus,
+      trialEnd: subscription.trial_end,
+      cancelAt: subscription.cancel_at,
+    });
+
+  }
+
 
   return c.json({ received: true });
 };

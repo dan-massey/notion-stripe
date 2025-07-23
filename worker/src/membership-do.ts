@@ -2,9 +2,9 @@ import { DurableObject } from "cloudflare:workers";
 import type { StripeMode, Env } from "@/types";
 
 export type MembershipStatus = null | {
-  stripeSubscriptionStatus?: string;
-  stripeCustomerId?: string; // Customer ID in _my_ Stripe account
-  stripeSubscriptionId?: string; // Subscription ID in _my_ Stripe account
+  stripeSubscriptionStatus?: string | null;
+  stripeCustomerId?: string | null; // Customer ID in _my_ Stripe account
+  stripeSubscriptionId?: string | null; // Subscription ID in _my_ Stripe account
   trialEnd?: number | null;
   cancelAt?: number | null;
   stripeAccountId: string; // Stripe account ID of the user
@@ -64,6 +64,20 @@ export class MembershipDurableObject extends DurableObject<Env> {
     await this.ctx.storage.put("membershipStatus", this.membershipStatus);
 
     return;
+  }
+
+  async deleteSubscription() {
+    if (!this.membershipStatus) {
+      throw new Error("Membership status not found");
+    }
+    this.membershipStatus.stripeSubscriptionStatus = null;
+    this.membershipStatus.stripeSubscriptionId = null;
+    this.membershipStatus.trialEnd = null;
+    this.membershipStatus.cancelAt = null;
+    this.membershipStatus.trialEnd = null;
+
+    console.log("Deleting subscription in DO", this.membershipStatus);
+    await this.ctx.storage.put("membershipStatus", this.membershipStatus);
   }
 
   async setNotionPages({

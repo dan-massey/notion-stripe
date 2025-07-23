@@ -25,7 +25,7 @@ const AppSettingsContent = () => {
   };
 
   const getStepThree = () => {
-    if (account?.manageSubscriptionUrl) {
+    if (account?.membership?.stripeSubscriptionId) {
       return <ManageSubscription />;
     } else {
       return <Subscribe />;
@@ -45,7 +45,7 @@ const AppSettingsContent = () => {
         )}
       </Box>
       <Box css={{ width: "fill" }}>
-        {(account?.membership?.parentPageId || account?.manageSubscriptionUrl) ? (
+        {(account?.membership?.parentPageId || account?.membership?.stripeSubscriptionId) ? (
           getStepThree()
         ) : (
           <Placeholder step="Step 3" title="Set up Billing (14 day free trial)" />
