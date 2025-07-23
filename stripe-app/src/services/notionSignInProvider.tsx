@@ -6,6 +6,7 @@ import React, {
   useEffect,
 } from "react";
 import { useApi } from "./apiProvider";
+import { useAccount } from "./accountProvider";
 import { stripe } from "@/services/stripeClient";
 import type { NotionSecretName } from "@worker/stripe-frontend-endpoints";
 const notionSecretName: NotionSecretName = "NOTION_AUTH_TOKEN";
@@ -32,11 +33,11 @@ export const NotionSignInProvider: React.FC<NotionSignInProviderProps> = ({
   children,
 }) => {
   const { getTyped, postTyped } = useApi();
+  const { setDatabaseIds } = useAccount();
 
   // Authentication state
   const [isSignedIn, setIsSignedIn] = useState(false);
   const [signInUrl, setSignInUrl] = useState<string | null>(null);
-  const [authSecret, setAuthSecret] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [authError, setAuthError] = useState<string | null>(null);
 
@@ -61,15 +62,10 @@ export const NotionSignInProvider: React.FC<NotionSignInProviderProps> = ({
       const notionAuthSecret = secrets.data.find(
         (secret) => secret.name === notionSecretName
       );
-
-      console.log("Notion auth response:", response);
-      console.log("Notion auth secret:", notionAuthSecret);
-      console.log("All secrets:", secrets.data);
       
       // Set authentication status based on whether we found the secret
       const hasValidSecret = notionAuthSecret !== undefined;
       setIsSignedIn(hasValidSecret);
-      setAuthSecret(hasValidSecret ? notionAuthSecret.name : null);
       setSignInUrl(response.url);
     } catch (err) {
       setAuthError(
@@ -88,6 +84,13 @@ export const NotionSignInProvider: React.FC<NotionSignInProviderProps> = ({
       setAuthError(null);
       await postTyped("/stripe/notion-auth/delete");
       setIsSignedIn(false);
+      // Clear database IDs when signing out
+      setDatabaseIds({
+        parentPageId: null,
+        customerDatabaseId: null,
+        invoiceDatabaseId: null,
+        chargeDatabaseId: null,
+      });
     } catch (err) {
       setAuthError(err instanceof Error ? err.message : "Failed to sign out");
     } finally {
