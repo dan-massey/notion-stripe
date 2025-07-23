@@ -60,7 +60,7 @@ const AppSettings = ({ userContext, environment }: ExtensionContextValue) => {
     <ApiProvider
       userContext={userContext}
       environment={environment}
-      apiUrl="https://willing-grub-included.ngrok-free.app"
+      apiUrl="https://notion.sync-to-db.com"
     >
       <AccountProvider>
         <NotionSignInProvider>

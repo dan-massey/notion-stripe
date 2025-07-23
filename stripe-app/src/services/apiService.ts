@@ -18,7 +18,6 @@ const makeHeaders = (
     "X-Stripe-User-Id": apiSignaturePayload.user_id,
     "X-Stripe-Mode": mode,
     "X-Stripe-Is-Sandbox": isSandbox ? "true" : "false",
-    "ngrok-skip-browser-warning": "true",
   };
 };
 

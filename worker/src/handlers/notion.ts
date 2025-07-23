@@ -49,22 +49,6 @@ export const notionAuthCallback = async (c: AppContext) => {
 
     console.log("Account ID:", getCookie(c, "account_id"));
     console.log("Mode:", getCookie(c, "mode"));
-    console.log("Tokens:", tokens);
-
-    // OAuth2Tokens {
-    //   data: {
-    //     access_token: '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',
-    //     token_type: 'bearer',
-    //     refresh_token: null,
-    //     bot_id: '3baebfa3-f9cc-4641-9bf3-0e4cbf4e3f6d',
-    //     workspace_name: 'Dan Massey’s Workspace',
-    //     workspace_icon: null,
-    //     workspace_id: '1112c848-8ce8-8191-bee4-0003432f43ee',
-    //     owner: { type: 'user', user: [Object] },
-    //     duplicated_template_id: null,
-    //     request_id: 'dcf1c0bf-399c-47aa-a234-6fd158551c57'
-    //   }
-    // }
 
     const stripe = makeStripeClient(
       c,
@@ -109,10 +93,7 @@ export const notionAuthCallback = async (c: AppContext) => {
     });
 
     // Now you have tokens.accessToken to use with Notion API
-    return c.json({
-      success: true,
-      accessToken: tokens.accessToken,
-    });
+    return c.redirect('/');
   } catch (error) {
     console.error("OAuth callback error:", error);
     return c.text("Authentication failed", 400);

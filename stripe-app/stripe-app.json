@@ -1,7 +1,7 @@
 {
   "id": "com.massey-consulting.notion-sync",
-  "version": "0.0.11",
-  "name": "Sync with Notion",
+  "version": "0.0.14",
+  "name": "Sync to DB - A Notion integration",
   "icon": "",
   "permissions": [
     {
@@ -31,6 +31,14 @@
     {
       "permission": "charge_read",
       "purpose": "Read charge details"
+    },
+    {
+      "permission": "payment_method_read",
+      "purpose": "Read payment methods"
+    },
+    {
+      "permission": "payment_intent_read",
+      "purpose": "Read payment intents"
     }
   ],
   "connect_permissions": null,
@@ -43,8 +51,8 @@
     ],
     "content_security_policy": {
       "connect-src": [
-        "https://willing-grub-included.ngrok-free.app/stripe",
-        "https://willing-grub-included.ngrok-free.app/stripe/"
+        "https://notion.sync-to-db.com/stripe",
+        "https://notion.sync-to-db.com/stripe/"
       ],
       "image-src": null,
       "purpose": ""
@@ -55,7 +63,7 @@
     "url": ""
   },
   "constants": {
-    "API_BASE": "https://willing-grub-included.ngrok-free.app"
+    "API_BASE": "https://notion.sync-to-db.com"
   },
   "stripe_api_access_type": "platform",
   "distribution_type": "public",

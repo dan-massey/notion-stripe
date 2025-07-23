@@ -3,8 +3,8 @@ import { ensureMembershipDo } from "@/utils/do";
 import type { MembershipResponse } from "@/stripe-frontend-endpoints";
 const checkoutLinks = {
   test: "https://buy.stripe.com/test_bJe9ASfRtdBXd6CeDbc3m00",
-  live: "",
-  sandbox: "",
+  live: "https://buy.stripe.com/bJe9ASfRtdBXd6CeDbc3m00",
+  sandbox: "https://buy.stripe.com/test_bJe3cu7qoeFC6vY49J5kk00",
 };
 
 

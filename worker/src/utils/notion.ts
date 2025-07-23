@@ -27,6 +27,7 @@ export type {
 } from "@notionhq/client/build/src/api-endpoints";
 
 const NOTION_API_BASE_URL = "https://api.notion.com/v1";
+const MIN_REQUEST_DURATION_MS = 340; // 0.34 seconds to stay under 3 requests/second
 
 async function notionAPI<T>(
   endpoint: string,
@@ -38,12 +39,10 @@ async function notionAPI<T>(
 
   console.log(`[NotionAPI] Making request to: ${url}`);
   console.log(`[NotionAPI] Method: ${options.method}`);
-  console.log(`[NotionAPI] Headers:`, options.headers);
-  if (options.body) {
-    console.log(`[NotionAPI] Body:`, options.body);
-  }
 
   for (let i = 0; i < retries; i++) {
+    const requestStartTime = Date.now();
+    
     try {
       const response = await fetch(url, options);
 
@@ -63,11 +62,26 @@ async function notionAPI<T>(
       }
 
       const responseData = await response.json() as T;
-      console.log(`[NotionAPI] Success response:`, responseData);
+      
+      // Ensure minimum request duration to stay under rate limit
+      const requestDuration = Date.now() - requestStartTime;
+      if (requestDuration < MIN_REQUEST_DURATION_MS) {
+        const remainingDelay = MIN_REQUEST_DURATION_MS - requestDuration;
+        console.log(`[NotionAPI] Enforcing rate limit, waiting additional ${remainingDelay}ms`);
+        await new Promise((resolve) => setTimeout(resolve, remainingDelay));
+      }
+      
       return responseData;
     } catch (error) {
       console.error(`[NotionAPI] Request failed (attempt ${i + 1}/${retries}):`, error);
       lastError = error as Error;
+      
+      // Still enforce minimum duration even on errors to maintain consistent rate limiting
+      const requestDuration = Date.now() - requestStartTime;
+      if (requestDuration < MIN_REQUEST_DURATION_MS) {
+        const remainingDelay = MIN_REQUEST_DURATION_MS - requestDuration;
+        await new Promise((resolve) => setTimeout(resolve, remainingDelay));
+      }
     }
   }
   throw (
@@ -195,7 +209,6 @@ export async function upsertPageByTitle(
 ): Promise<CreatePageResponse | UpdatePageResponse> {
   console.log(`[UpsertPage] Starting upsert for title: "${titleValue}" in database: ${databaseId}`);
   console.log(`[UpsertPage] Title property: ${titleProperty}`);
-  console.log(`[UpsertPage] Properties to upsert:`, JSON.stringify(properties, null, 2));
 
   // First, query the database to see if a page with this title already exists
   console.log(`[UpsertPage] Querying database for existing page...`);

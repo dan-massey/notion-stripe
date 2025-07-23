@@ -3,17 +3,12 @@
 	<head>
 		<meta charset="UTF-8" />
 		<meta name="viewport" content="width=device-width, initial-scale=1.0" />
-		<title>Hello, World!</title>
+		<title>Notion Connected</title>
 	</head>
 	<body>
-		<h1 id="heading"></h1>
-		<script>
-			fetch('/message')
-				.then((resp) => resp.text())
-				.then((text) => {
-					const h1 = document.getElementById('heading');
-					h1.textContent = text;
-				});
-		</script>
+		<h1 id="heading">Please return to Stripe to continue setting up the integration</h1>
+        <script>
+            window.close();
+        </script>
 	</body>
 </html>

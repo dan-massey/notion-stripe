@@ -14,7 +14,6 @@ export const configuredCors: MiddlewareHandler = cors({
     'X-Stripe-User-Id',
     'X-Stripe-Mode',
     'X-Stripe-Is-Sandbox',
-    'ngrok-skip-browser-warning'
   ],
   allowMethods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
   exposeHeaders: ['Content-Length'],
