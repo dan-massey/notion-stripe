@@ -31,6 +31,14 @@ export const stripeWebhookHandler = async (c: AppContext) => {
   const event = c.get("stripeEvent");
   const stripeAccountId = event?.account;
 
+  if (modeFromUrl === "test" && event?.livemode === true) {
+    return c.json({ message: "Live event sent to test endpoint, ignoring." });
+  }
+
+  if (modeFromUrl === "live" && event?.livemode === false) {
+    return c.json({ message: "Test event sent to live endpoint, ignoring." });
+  }
+
   if (!stripeAccountId) {
     throw new Error("Missing Stripe Account ID on webhook event.");
   }
