@@ -25,10 +25,17 @@ export const handleCheckoutComplete = async (
 
   if (typeof session.subscription === "string") {
     subscriptionId = session.subscription;
-    const subObj = await stripe.subscriptions.retrieve(subscriptionId);
-    subscriptionStatus = subObj.status;
-    trialEnd = subObj.trial_end;
-    cancelAt = subObj.cancel_at;
+    console.log("Attempting to retrieve subscription:", subscriptionId, "in mode:", mode);
+    try {
+      const subObj = await stripe.subscriptions.retrieve(subscriptionId);
+      console.log("Successfully retrieved subscription:", subObj.id, "status:", subObj.status);
+      subscriptionStatus = subObj.status;
+      trialEnd = subObj.trial_end;
+      cancelAt = subObj.cancel_at;
+    } catch (error) {
+      console.error("Failed to retrieve subscription:", subscriptionId, "Error:", error.message);
+      throw error;
+    }
   } else if (session.subscription) {
     subscriptionId = session.subscription.id;
     subscriptionStatus = session.subscription.status;

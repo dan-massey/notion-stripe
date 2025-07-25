@@ -16,18 +16,22 @@ import { useAccount } from "@/services/accountProvider";
 type NotionPagesResponse = ResponseForEndpoint<"/stripe/notion/pages">;
 
 const getIconFromPage = (page: NotionPagesResponse["results"][0]) => {
-  const icon = page.icon;
+  const icon = page?.icon;
   if (icon?.type === "emoji") {
     return icon.emoji;
   }
 };
 
 const getLabelFromPage = (page: NotionPagesResponse["results"][0]) => {
+  // Find the property with type "title"
+  const titleProperty = Object.values(page?.properties || {}).find(
+    (prop: any) => prop?.type === "title"
+  ) as any;
   const title =
-    page.properties.title.type === "title"
-      ? page.properties.title.title[0].plain_text
-      : null;
-  return `${getIconFromPage(page) ?? ""} ${title}`;
+    titleProperty?.type === "title" && titleProperty.title?.length > 0
+      ? titleProperty.title[0]?.plain_text
+      : "Untitled";
+  return `${getIconFromPage(page) ?? ""} ${title}`.trim();
 };
 
 export const NotionPageSelector: React.FC = () => {
@@ -128,24 +132,32 @@ export const NotionPageSelector: React.FC = () => {
             font: "subheading",
           }}
         >
-          Your recent pages:
+          Your 5 most recently edited pages:
         </Box>
         <Box css={{ stack: "y", gapY: "small", marginY: "small" }}>
-          {pages.map((page) => (
-            <Radio
-              name="page"
-              value={page.id}
-              key={page.id}
-              label={getLabelFromPage(page)}
-              onChange={(event) => {
-                setSelectedPageId(event.target.value);
-              }}
-            />
-          ))}
+          {pages
+            .filter((page) => {
+              if (page?.object !== "page") return false;
+              // Check if the page has any property with type "title"
+              return Object.values(page?.properties || {}).some(
+                (prop: any) => prop?.type === "title"
+              );
+            })
+            .map((page) => (
+              <Radio
+                name="page"
+                value={page.id}
+                key={page.id}
+                label={getLabelFromPage(page)}
+                onChange={(event) => {
+                  setSelectedPageId(event.target.value);
+                }}
+              />
+            ))}
         </Box>
         <Box css={{ stack: "x", gapX: "medium" }}>
           <Button onPress={fetchPages} css={{ width: "1/2" }}>
-            <Icon name="refresh" size="xsmall" /> Refresh Pages
+            <Icon name="refresh" size="xsmall" /> Refresh Recent Pages
           </Button>
           <Button
             type="primary"

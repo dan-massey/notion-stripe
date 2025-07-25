@@ -14,6 +14,7 @@ export const NotionDatabasesLinked: React.FC = () => {
   const { account, setDatabaseIds } = useAccount();
 
   const [resettingDatabases, setResettingDatabases] = useState(false);
+  const [confirm, setConfirm] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
 
   const resetDatabases = async () => {
@@ -43,6 +44,58 @@ export const NotionDatabasesLinked: React.FC = () => {
       </Box>
     );
   }
+
+    if (confirm) {
+      return (
+        <Box
+          css={{
+            width: "fill",
+            height: "fill",
+            stack: "y",
+            distribute: "space-between",
+            gap: "medium",
+            keyline: "neutral",
+            borderRadius: "medium",
+            padding: "medium",
+          }}
+        >
+          <Box css={{ font: "subheading" }}>Step 2</Box>
+          <Box css={{ stack: "y", distribute: "space-between", alignY: "top" }}>
+            <Box css={{ stack: "y", gapY: "small", alignY: "center" }}>
+              <Box css={{ font: "heading" }}>Reset Notion Databases</Box>
+              <Box css={{ stack: "y", gapY: "small"}}>
+                <Box css={{ font: "subheading", color: "critical"}}>Warning!</Box>
+                <Box>
+                  If you reset the database connection, any currently connected databases will stop updating.
+                </Box>
+                <Box>
+                  If you add databases to a new page in Notion, they will be created as empty.
+                </Box>
+                <Box css={{ stack: "x", gapX: "medium" }}>
+                  <Button
+                    type={ "secondary"}
+                    onPress={() => setConfirm(false)}
+                    css={{ width: "1/2" }}
+                  >
+                    Keep existing databases
+                  </Button>
+                  <Button
+                    type={ "destructive"}
+      
+                    onPress={resetDatabases}
+                    css={{ width: "1/2" }}
+                  >
+                    I'm sure. Reset Databases.
+                  </Button>
+                </Box>
+              </Box>
+            </Box>
+          </Box>
+        </Box>
+      );
+    }
+  
+  
 
   if (error) {
     return (
@@ -113,7 +166,7 @@ export const NotionDatabasesLinked: React.FC = () => {
         <Button
           type="destructive"
           css={{ width: "1/2" }}
-          onPress={resetDatabases}
+          onPress={() => setConfirm(true)}
         >
           Reset Databases
         </Button>

@@ -101,7 +101,7 @@ export const getNotionPages = async (c: AppContext) => {
         direction: "descending",
         timestamp: "last_edited_time",
       },
-      page_size: 10,
+      page_size: 5,
     };
 
     const data = await searchNotion(token, body);
@@ -172,6 +172,14 @@ export const setUpDatabases = async (c: AppContext) => {
     parentPageId: parentPageId,
     subscriptionDatabaseId: subscriptionDb.id,
   };
+
+  console.log("trying to set notion pages");
+  console.log("stripeMode", c.get("stripeMode"));
+  console.log({
+    stripeAccountId: stripeAccountId,
+    stripeMode: c.get("stripeMode") || "test",
+    ...resp,
+  })
 
   await membership.setNotionPages({
     stripeAccountId: stripeAccountId,

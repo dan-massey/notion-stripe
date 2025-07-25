@@ -30,10 +30,15 @@ export const getMembership = async (c: AppContext) => {
   }
 
   console.log(membershipData);
-
-  const session = await stripe.billingPortal.sessions.create({
-    customer: membershipData.stripeCustomerId,
-  });
+  let url: string | undefined = undefined;
+  try {
+    const session = await stripe.billingPortal.sessions.create({
+      customer: membershipData.stripeCustomerId,
+    });
+    url = session.url;
+  } catch (e) {
+    console.warn(`Error making billing portal URL: ${(e as Error).message}`);
+  }
 
   resp = {
     ...resp,
@@ -41,7 +46,7 @@ export const getMembership = async (c: AppContext) => {
     stripeAccountId,
     stripeUserId: c.get("stripeUserId"),
     membership: membershipData,
-    manageSubscriptionUrl: session.url,
+    manageSubscriptionUrl: url,
   };
 
   return c.json(resp);

@@ -5,13 +5,20 @@ import type { Stripe } from "stripe";
 import type { AppContext, StripeMode } from "@/types";
 
 export const membershipWebhookHandler = async (c: AppContext) => {
-  const mode = c.req.query("mode") as StripeMode;
+  const mode = c.req.param("mode") as StripeMode;
   const stripe = makeStripeClient(c, mode);
   const event = (await c.req.json()) as Stripe.Event;
 
   if (!event) {
     return c.json({ message: "No event provided" }, 400);
   }
+
+  console.log("Received webhook event:", {
+    type: event.type,
+    id: event.id,
+    mode: mode,
+    subscriptionId: event.type.includes('subscription') ? event.data.object.id : 'N/A'
+  });
 
   if (event.type === "checkout.session.completed") {
     await handleCheckoutComplete(

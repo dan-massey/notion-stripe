@@ -7,9 +7,9 @@ import type { DatabaseSetupResponse, DatabaseClearResponse } from "./handlers/st
 import type { SearchResult } from "./utils/notion";
 import type { StripeMode } from "./types";
 import type { MembershipStatus } from "./membership-do";
-import { clearDatabaseLinks, deleteNotionAuth, getNotionLink, getNotionPages, setUpDatabases } from "@/handlers/stripe/notion";
-import { getMembership } from "@/handlers/stripe/membership";
-import { helloWorldHandler } from "@/handlers/stripe/helloworld";
+import { clearDatabaseLinks, deleteNotionAuth, getNotionLink, getNotionPages, setUpDatabases } from "./handlers/stripe/notion";
+import { getMembership } from "./handlers/stripe/membership";
+import { helloWorldHandler } from "./handlers/stripe/helloworld";
 
 export type MembershipResponse = {
   checkoutUrl: string;
@@ -20,14 +20,14 @@ export type MembershipResponse = {
   manageSubscriptionUrl?: string;
 };
 
-type EndpointInfo = {
+type EndpointInfo<T = any> = {
   path: `/stripe/${string}`,
   methods: Array<"POST"|"GET">,
-  response: any,
+  response: T,
   handler: any
 }
 
-export const ENDPOINTS: Record<string, EndpointInfo> = {
+export const ENDPOINTS = {
   helloworld: {
     path: "/stripe/helloworld",
     methods: ["POST"],
@@ -70,7 +70,7 @@ export const ENDPOINTS: Record<string, EndpointInfo> = {
     response: {} as { message: string },
     handler: deleteNotionAuth
   }
-} as const;
+} as const satisfies Record<string, EndpointInfo>;
 
 
 // Auto-generate endpoint lists from ENDPOINTS
