@@ -36,10 +36,11 @@ app.use("/stripe/*", stripeFrontendMiddleware);
 
 // Stripe frontend endpoints are defined in the ENDPOINTS const and added programatically.
 Object.values(ENDPOINTS).forEach((endpointInfo) => {
-  if (endpointInfo.methods.includes("POST")) {
+  const methods = endpointInfo.methods as readonly string[];
+  if (methods.includes("POST")) {
     app.post(endpointInfo.path, endpointInfo.handler);
   }
-  if (endpointInfo.methods.includes("GET")) {
+  if (methods.includes("GET")) {
     app.get(endpointInfo.path, endpointInfo.handler);
   }
 });

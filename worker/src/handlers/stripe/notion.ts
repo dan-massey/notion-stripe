@@ -90,6 +90,8 @@ export const getNotionPages = async (c: AppContext) => {
   if (!token) {
     return c.json({ error: "Notion auth token not found" }, 404);
   }
+  const cursor = c.req.query("nextCursor");
+  const searchValue = c.req.query("searchValue");
 
   try {
     const body: SearchParameters = {
@@ -103,6 +105,14 @@ export const getNotionPages = async (c: AppContext) => {
       },
       page_size: 5,
     };
+
+    if (cursor) {
+      body.start_cursor = cursor;
+    }
+
+    if (searchValue) {
+      body.query = searchValue;
+    }
 
     const data = await searchNotion(token, body);
 

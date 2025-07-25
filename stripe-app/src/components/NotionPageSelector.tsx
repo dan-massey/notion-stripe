@@ -6,6 +6,7 @@ import {
   Icon,
   Radio,
   Inline,
+  TextField,
 } from "@stripe/ui-extension-sdk/ui";
 
 import { useApi } from "@/services/apiProvider";
@@ -44,16 +45,59 @@ export const NotionPageSelector: React.FC = () => {
   const [creatingDatabases, setCreatingDatabases] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [selectedPageId, setSelectedPageId] = useState<string | null>(null);
+  const [searchValue, setSearchValue] = useState<string | null>(null);
+  const [nextCursor, setNextCursor] = useState<string | null>(null);
 
-  const fetchPages = async () => {
+  const refreshAllPages = async () => {
     if (!isSignedIn) return;
 
     try {
       setLoadingPages(true);
       setError(null);
+      setSearchValue(null);
 
       const response = await getTyped("/stripe/notion/pages");
       setPages(response.results);
+      setNextCursor(response.next_cursor);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to fetch pages");
+      console.error("Failed to fetch Notion pages:", err);
+    } finally {
+      setLoadingPages(false);
+    }
+  };
+
+  const searchPages = async () => {
+    if (!isSignedIn) return;
+    try {
+      setLoadingPages(true);
+      setError(null);
+
+      const response = await getTyped("/stripe/notion/pages", null, {
+        searchValue: searchValue ?? "",
+      });
+      setPages(response.results);
+      setNextCursor(response.next_cursor);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to fetch pages");
+      console.error("Failed to fetch Notion pages:", err);
+    } finally {
+      setLoadingPages(false);
+    }
+  };
+
+  const pageForward = async () => {
+    if (!isSignedIn || !nextCursor) return;
+    try {
+      setLoadingPages(true);
+      setError(null);
+
+      const response = await getTyped("/stripe/notion/pages", null, {
+        nextCursor,
+        searchValue: searchValue ?? "",
+      });
+      setPages(response.results);
+      setNextCursor(response.next_cursor);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to fetch pages");
       console.error("Failed to fetch Notion pages:", err);
@@ -85,7 +129,7 @@ export const NotionPageSelector: React.FC = () => {
 
   useEffect(() => {
     if (isSignedIn) {
-      fetchPages();
+      refreshAllPages();
     }
   }, [isSignedIn]);
 
@@ -105,16 +149,17 @@ export const NotionPageSelector: React.FC = () => {
         <Box css={{ color: "critical", marginBottom: "medium" }}>
           Error: {error}
         </Box>
-        <Button onPress={fetchPages}>Retry</Button>
+        <Button onPress={refreshAllPages}>Retry</Button>
       </Box>
     );
   } else if (pages.length === 0) {
     content = (
       <Box css={{ padding: "medium" }}>
         <Box css={{ color: "secondary", marginBottom: "medium" }}>
-          No pages found in your Notion workspace
+          No pages found in your Notion workspace. Check you shared pages with
+          the app.
         </Box>
-        <Button onPress={fetchPages}>Refresh</Button>
+        <Button onPress={refreshAllPages}>Refresh</Button>
       </Box>
     );
   } else {
@@ -129,10 +174,21 @@ export const NotionPageSelector: React.FC = () => {
       <>
         <Box
           css={{
-            font: "subheading",
+            stack: "x",
+            gapX: "small",
+            marginY: "small",
+            alignY: "bottom",
           }}
         >
-          Your 5 most recently edited pages:
+          <TextField
+            css={{ width: "1/3" }}
+            size="small"
+            label="Filter pages"
+            type="text"
+            value={searchValue || ""}
+            onChange={(e) => setSearchValue(e.target.value)}
+          />
+          <Button size="small" onPress={searchPages}>Search</Button>
         </Box>
         <Box css={{ stack: "y", gapY: "small", marginY: "small" }}>
           {pages
@@ -154,9 +210,15 @@ export const NotionPageSelector: React.FC = () => {
                 }}
               />
             ))}
+          <Box css={{ stack: "x", gapX: "small", marginY: "small" }}>
+            <Button disabled={!nextCursor} onPress={pageForward} size="small">
+              See more
+              <Icon name="next" size="xsmall" />
+            </Button>
+          </Box>
         </Box>
         <Box css={{ stack: "x", gapX: "medium" }}>
-          <Button onPress={fetchPages} css={{ width: "1/2" }}>
+          <Button onPress={refreshAllPages} css={{ width: "1/2" }}>
             <Icon name="refresh" size="xsmall" /> Refresh Recent Pages
           </Button>
           <Button

@@ -1,6 +1,6 @@
 {
   "id": "com.massey-consulting.notion-sync",
-  "version": "0.0.18",
+  "version": "0.0.19",
   "name": "Sync to DB - A Notion integration",
   "icon": "",
   "permissions": [
