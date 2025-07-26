@@ -25,8 +25,10 @@ export const NotionSignIn = () => {
         <Box css={{ stack: "y", distribute: "space-between", alignY: "top" }}>
           <Box css={{ stack: "y", gapY: "small", alignY: "center" }}>
             <Box css={{ font: "heading" }}>Disconnect Stripe from Notion</Box>
-            <Box css={{ stack: "y", gapY: "small"}}>
-              <Box css={{ font: "subheading", color: "critical"}}>Warning!</Box>
+            <Box css={{ stack: "y", gapY: "small" }}>
+              <Box css={{ font: "subheading", color: "critical" }}>
+                Warning!
+              </Box>
               <Box>
                 Disconnecting Notion will stop your Notion databases being
                 updated.
@@ -49,7 +51,10 @@ export const NotionSignIn = () => {
                 <Button
                   type={isLoading ? "secondary" : "destructive"}
                   disabled={isLoading}
-                  onPress={signOut}
+                  onPress={async () => {
+                    setConfirm(false);
+                    await signOut();
+                  }}
                   css={{ width: "1/2" }}
                 >
                   I'm sure. Disconnect from Notion.
