@@ -319,7 +319,7 @@ export class BackfillWorkflow extends WorkflowEntrypoint<
       );
     });
 
-    await step.do("start next workflow", async () => {
+    const _newInvocation = await step.do("start next workflow", async () => {
       const newParams: Params = { ...event.payload };
       newParams.entityStatus[entityToBackfill].started = true;
       newParams.entityStatus[entityToBackfill].completed =
@@ -332,9 +332,11 @@ export class BackfillWorkflow extends WorkflowEntrypoint<
         newParams.entityStatus[entityToBackfill].startingAfter = lastIdInResult;
       }
 
-      await this.env.BACKFILL_WORKFLOW.create({
+      const newWorkflowInvocation = await this.env.BACKFILL_WORKFLOW.create({
         params: newParams,
       });
+
+      return newWorkflowInvocation.id;
     });
   }
 }
