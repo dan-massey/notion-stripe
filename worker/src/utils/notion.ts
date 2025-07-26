@@ -58,7 +58,43 @@ async function notionAPI<T>(
       if (!response.ok) {
         const errorBody = await response.text();
         console.error(`[NotionAPI] Error response body:`, errorBody);
-        throw new Error(`Notion API error: ${response.status} ${response.statusText} - ${errorBody}`);
+        
+        // Check if this is a non-retryable error
+        let shouldRetry = true;
+        try {
+          const errorObj = JSON.parse(errorBody);
+          const nonRetryableCodes = [
+            'invalid_json',
+            'invalid_request_url', 
+            'invalid_request',
+            'invalid_grant',
+            'validation_error',
+            'missing_version',
+            'unauthorized',
+            'restricted_resource',
+            'object_not_found'
+          ];
+          
+          if (nonRetryableCodes.includes(errorObj.code) || 
+              response.status === 400 || 
+              response.status === 401 || 
+              response.status === 403 || 
+              response.status === 404) {
+            shouldRetry = false;
+            console.log(`[NotionAPI] Non-retryable error detected: ${errorObj.code || response.status}, not retrying`);
+          }
+        } catch {
+          // If we can't parse the error, default to retrying for unknown errors
+        }
+        
+        const error = new Error(`Notion API error: ${response.status} ${response.statusText} - ${errorBody}`);
+        if (!shouldRetry) {
+          throw error; // Don't retry, throw immediately
+        }
+        
+        // For retryable errors, store the error and continue the retry loop
+        lastError = error;
+        continue;
       }
 
       const responseData = await response.json() as T;

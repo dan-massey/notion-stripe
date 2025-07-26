@@ -38,6 +38,7 @@ export const deleteNotionAuth = async (c: AppContext) => {
     parentPageId: null,
     subscriptionDatabaseId: null,
   });
+  await membership.clearErrors();
 
   try {
     const token = await getNotionToken(c, stripeAccountId);
@@ -73,6 +74,7 @@ export const clearDatabaseLinks = async (c: AppContext) => {
     stripeAccountId,
     c.get("stripeMode")
   );
+  await membership.clearErrors();
   await membership.clearNotionPages();
 
   const resp: DatabaseClearResponse = {

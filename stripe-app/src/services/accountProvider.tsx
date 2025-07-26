@@ -58,6 +58,7 @@ export const AccountProvider: React.FC<AccountProviderProps> = ({
         customerDatabaseId,
         invoiceDatabaseId,
         chargeDatabaseId,
+        errors: null
       } as typeof oldMembershipInfo;
       setAccount({
         ...account,
@@ -65,6 +66,7 @@ export const AccountProvider: React.FC<AccountProviderProps> = ({
       });
     }
   };
+
 
   const fetchMembership = async () => {
     try {

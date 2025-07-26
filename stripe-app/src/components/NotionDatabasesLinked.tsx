@@ -137,25 +137,49 @@ export const NotionDatabasesLinked: React.FC = () => {
           target="_blank"
           href={makeNotionLink(account?.membership?.customerDatabaseId)}
         >
-          👥 Customers Database
+          👥 Customers Database{" "}
+          {account?.membership?.errors?.customerDatabaseError && (
+            <Inline css={{ color: "critical" }}>
+              Something is wrong with this database:{" "}
+              {account?.membership?.errors?.customerDatabaseError}
+            </Inline>
+          )}
         </Link>
         <Link
           target="_blank"
           href={makeNotionLink(account?.membership?.chargeDatabaseId)}
         >
-          💳 Charges Database
+          💳 Charges Database{" "}
+          {account?.membership?.errors?.chargeDatabaseError && (
+            <Inline css={{ color: "critical" }}>
+              Something is wrong with this database:{" "}
+              {account?.membership?.errors?.chargeDatabaseError}
+            </Inline>
+          )}
         </Link>
         <Link
           target="_blank"
           href={makeNotionLink(account?.membership?.subscriptionDatabaseId)}
         >
-          🔄 Subscriptions Database
+          🔄 Subscriptions Database{" "}
+          {account?.membership?.errors?.subscriptionDatabaseError && (
+            <Inline css={{ color: "critical" }}>
+              Something is wrong with this database:{" "}
+              {account?.membership?.errors?.subscriptionDatabaseError}
+            </Inline>
+          )}
         </Link>
         <Link
           target="_blank"
           href={makeNotionLink(account?.membership?.invoiceDatabaseId)}
         >
-          📄 Invoices Database
+          📄 Invoices Database{" "}
+          {account?.membership?.errors?.invoiceDatabaseError && (
+            <Inline css={{ color: "critical" }}>
+              Something is wrong with this database:{" "}
+              {account?.membership?.errors?.invoiceDatabaseError}
+            </Inline>
+          )}
         </Link>
       </Box>
       <Box

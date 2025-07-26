@@ -1,6 +1,14 @@
 import { DurableObject } from "cloudflare:workers";
 import type { StripeMode, Env } from "@/types";
 
+type MembershipErrors = {
+  tokenError: string | null;
+  customerDatabaseError: string | null;
+  invoiceDatabaseError: string | null;
+  chargeDatabaseError: string | null;
+  subscriptionDatabaseError: string | null;
+};
+
 export type MembershipStatus = null | {
   stripeSubscriptionStatus?: string | null;
   stripeCustomerId?: string | null; // Customer ID in _my_ Stripe account
@@ -14,10 +22,27 @@ export type MembershipStatus = null | {
   invoiceDatabaseId?: string | null; // Notion Database ID where invoice info is stored
   chargeDatabaseId?: string | null; // Notion Database ID where charge info is stored
   subscriptionDatabaseId?: string | null; // Notion Database ID where subscription info is stored
+  errors?: MembershipErrors | null;
 };
 
 export class MembershipDurableObject extends DurableObject<Env> {
   membershipStatus: MembershipStatus = null;
+
+  private get errors(): MembershipErrors {
+    if (!this.membershipStatus) {
+      throw new Error("Membership status not initialized");
+    }
+    if (!this.membershipStatus.errors) {
+      this.membershipStatus.errors = {
+        tokenError: null,
+        customerDatabaseError: null,
+        invoiceDatabaseError: null,
+        chargeDatabaseError: null,
+        subscriptionDatabaseError: null,
+      };
+    }
+    return this.membershipStatus.errors;
+  }
 
   constructor(ctx: DurableObjectState, env: Env) {
     super(ctx, env);
@@ -38,9 +63,13 @@ export class MembershipDurableObject extends DurableObject<Env> {
       ...this.membershipStatus,
       ...membershipStatus,
     };
-    await this.ctx.storage.put("membershipStatus", newMembershipStatus);
+    await this.saveState();
     this.membershipStatus = newMembershipStatus;
     console.log(this);
+  }
+
+  async saveState() {
+    await this.ctx.storage.put("membershipStatus", this.membershipStatus);
   }
 
   async setStatus({
@@ -58,7 +87,9 @@ export class MembershipDurableObject extends DurableObject<Env> {
   }) {
     console.log(this.membershipStatus);
     if (!this.membershipStatus) {
-      console.warn("Membership status not initialized, creating with provided account info");
+      console.warn(
+        "Membership status not initialized, creating with provided account info"
+      );
       this.membershipStatus = {
         stripeAccountId,
         stripeMode,
@@ -69,7 +100,7 @@ export class MembershipDurableObject extends DurableObject<Env> {
     this.membershipStatus.trialEnd = trialEnd;
     this.membershipStatus.cancelAt = cancelAt;
     console.log("Updating membership status in DO", this.membershipStatus);
-    await this.ctx.storage.put("membershipStatus", this.membershipStatus);
+    await this.saveState();
 
     return;
   }
@@ -77,9 +108,13 @@ export class MembershipDurableObject extends DurableObject<Env> {
   async deleteSubscription(stripeAccountId?: string, stripeMode?: StripeMode) {
     if (!this.membershipStatus) {
       if (!stripeAccountId || !stripeMode) {
-        throw new Error("Membership status not found and account info not provided");
+        throw new Error(
+          "Membership status not found and account info not provided"
+        );
       }
-      console.warn("Membership status not initialized, creating with provided account info");
+      console.warn(
+        "Membership status not initialized, creating with provided account info"
+      );
       this.membershipStatus = {
         stripeAccountId,
         stripeMode,
@@ -91,8 +126,9 @@ export class MembershipDurableObject extends DurableObject<Env> {
     this.membershipStatus.cancelAt = null;
 
     console.log("Deleting subscription in DO", this.membershipStatus);
-    await this.ctx.storage.put("membershipStatus", this.membershipStatus);
+    await this.saveState();
   }
+
 
   async setNotionPages({
     stripeAccountId,
@@ -112,7 +148,9 @@ export class MembershipDurableObject extends DurableObject<Env> {
     subscriptionDatabaseId: string | null;
   }): Promise<void> {
     if (!this.membershipStatus) {
-      console.warn("Membership status not initialized, creating with provided account info");
+      console.warn(
+        "Membership status not initialized, creating with provided account info"
+      );
       this.membershipStatus = {
         stripeAccountId,
         stripeMode,
@@ -125,11 +163,18 @@ export class MembershipDurableObject extends DurableObject<Env> {
     this.membershipStatus.invoiceDatabaseId = invoiceDatabaseId;
     this.membershipStatus.chargeDatabaseId = chargeDatabaseId;
     this.membershipStatus.subscriptionDatabaseId = subscriptionDatabaseId;
-    await this.ctx.storage.put("membershipStatus", this.membershipStatus);
+    this.errors.chargeDatabaseError = null;
+    this.errors.customerDatabaseError = null;
+    this.errors.subscriptionDatabaseError = null;
+    this.errors.invoiceDatabaseError = null;
+    await this.saveState();
   }
 
   async clearNotionPages(): Promise<void> {
-    if (!this.membershipStatus?.stripeAccountId || !this.membershipStatus?.stripeMode) {
+    if (
+      !this.membershipStatus?.stripeAccountId ||
+      !this.membershipStatus?.stripeMode
+    ) {
       return;
     }
     await this.setNotionPages({
@@ -141,6 +186,27 @@ export class MembershipDurableObject extends DurableObject<Env> {
       chargeDatabaseId: null,
       subscriptionDatabaseId: null,
     });
+  }
+
+  async clearErrors(): Promise<MembershipStatus> {
+    if (this.membershipStatus?.errors) {
+      this.membershipStatus.errors = null;
+      await this.saveState();
+    }
+    return this.membershipStatus;
+  }
+
+  async setError(
+    key: keyof MembershipErrors,
+    value: string | null
+  ): Promise<MembershipStatus> {
+    if (!this.membershipStatus) {
+      return null;
+    }
+
+    this.errors[key] = value;
+    await this.saveState();
+    return this.membershipStatus;
   }
 
   async getStatus(): Promise<MembershipStatus> {

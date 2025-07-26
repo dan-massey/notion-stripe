@@ -4,13 +4,15 @@ import { stripeCustomerToNotionProperties } from "@/utils/customer";
 import { stripeChargeToNotionProperties } from "@/utils/charge";
 import { stripeInvoiceToNotionProperties } from "@/utils/invoice";
 import { stripeSubscriptionToNotionProperties } from "@/utils/subscription";
+import type { MembershipStatus, MembershipDurableObject } from "@/membership-do";
 import type Stripe from "stripe";
 
 interface HandlerContext {
   stripe: Stripe;
   notionToken: string;
   stripeAccountId: string;
-  membershipStatus: any;
+  membershipStatus: MembershipStatus;
+  membership: MembershipDurableObject;
 }
 
 interface HandlerResult {
@@ -20,34 +22,175 @@ interface HandlerResult {
   statusCode?: number;
 }
 
+async function handleNotionError(
+  error: unknown,
+  context: HandlerContext,
+  databaseType: 'customerDatabaseError' | 'invoiceDatabaseError' | 'chargeDatabaseError' | 'subscriptionDatabaseError'
+): Promise<void> {
+  let errorMessage = 'Unknown Notion API error';
+  let errorField: 'tokenError' | typeof databaseType = databaseType;
+  
+  if (error instanceof Error) {
+    errorMessage = error.message;
+    
+    // Try to extract JSON from error message that follows pattern: "Error: Notion API error: 400 Bad Request - {JSON}"
+    const jsonMatch = errorMessage.match(/\s-\s({.*})$/);
+    if (jsonMatch) {
+      try {
+        const errorObj = JSON.parse(jsonMatch[1]);
+        
+        if (errorObj.message) {
+          errorMessage = errorObj.message;
+        }
+        
+        // Check if it's a token-related error based on code or status
+        if (errorObj.code === 'unauthorized' || 
+            errorObj.code === 'invalid_grant' || 
+            errorObj.status === 401) {
+          errorField = 'tokenError';
+        }
+      } catch {
+        // If JSON parsing fails, try direct JSON parse of full message
+        try {
+          const errorObj = JSON.parse(errorMessage);
+          if (errorObj.message) {
+            errorMessage = errorObj.message;
+          }
+          
+          if (errorObj.code === 'unauthorized' || 
+              errorObj.code === 'invalid_grant' || 
+              errorObj.status === 401) {
+            errorField = 'tokenError';
+          }
+        } catch {
+          // Fall back to string matching
+          if (errorMessage.includes('invalid_grant') || 
+              errorMessage.includes('unauthorized') ||
+              errorMessage.includes('API token is invalid') ||
+              errorMessage.includes('401')) {
+            errorField = 'tokenError';
+          }
+        }
+      }
+    } else {
+      // Try direct JSON parse if no pattern match
+      try {
+        const errorObj = JSON.parse(errorMessage);
+        if (errorObj.message) {
+          errorMessage = errorObj.message;
+        }
+        
+        if (errorObj.code === 'unauthorized' || 
+            errorObj.code === 'invalid_grant' || 
+            errorObj.status === 401) {
+          errorField = 'tokenError';
+        }
+      } catch {
+        // Fall back to string matching
+        if (errorMessage.includes('invalid_grant') || 
+            errorMessage.includes('unauthorized') ||
+            errorMessage.includes('API token is invalid') ||
+            errorMessage.includes('401')) {
+          errorField = 'tokenError';
+        }
+      }
+    }
+  } else if (typeof error === 'string') {
+    errorMessage = error;
+    
+    // Try to extract JSON from error string
+    const jsonMatch = errorMessage.match(/\s-\s({.*})$/);
+    if (jsonMatch) {
+      try {
+        const errorObj = JSON.parse(jsonMatch[1]);
+        
+        if (errorObj.message) {
+          errorMessage = errorObj.message;
+        }
+        
+        if (errorObj.code === 'unauthorized' || 
+            errorObj.code === 'invalid_grant' || 
+            errorObj.status === 401) {
+          errorField = 'tokenError';
+        }
+      } catch {
+        // Fall back to string matching
+        if (errorMessage.includes('invalid_grant') || 
+            errorMessage.includes('unauthorized') ||
+            errorMessage.includes('API token is invalid') ||
+            errorMessage.includes('401')) {
+          errorField = 'tokenError';
+        }
+      }
+    } else {
+      // Try direct JSON parse
+      try {
+        const errorObj = JSON.parse(errorMessage);
+        if (errorObj.message) {
+          errorMessage = errorObj.message;
+        }
+        
+        if (errorObj.code === 'unauthorized' || 
+            errorObj.code === 'invalid_grant' || 
+            errorObj.status === 401) {
+          errorField = 'tokenError';
+        }
+      } catch {
+        // Fall back to string matching
+        if (errorMessage.includes('invalid_grant') || 
+            errorMessage.includes('unauthorized') ||
+            errorMessage.includes('API token is invalid') ||
+            errorMessage.includes('401')) {
+          errorField = 'tokenError';
+        }
+      }
+    }
+  }
+  
+  console.error(`Notion API error for ${databaseType}:`, errorMessage);
+  
+  if (errorField === 'tokenError') {
+    await context.membership.setError('tokenError', errorMessage);
+  } else {
+    // If it's a database error, the token must be valid, so clear any token error
+    await context.membership.setError('tokenError', null);
+    await context.membership.setError(errorField, errorMessage);
+  }
+}
+
 async function upsertCustomer(
   context: HandlerContext,
   customerId: string,
   customerDatabaseId: string
 ): Promise<string | undefined> {
-  const expandedCustomer = await context.stripe.customers.retrieve(customerId, {
-    expand: [
-      'subscriptions',
-      'sources', 
-      'invoice_settings.default_payment_method',
-      'default_source'
-    ]
-  }, { stripeAccount: context.stripeAccountId });
-  
-  if (expandedCustomer.deleted) {
-    return undefined;
+  try {
+    const expandedCustomer = await context.stripe.customers.retrieve(customerId, {
+      expand: [
+        'subscriptions',
+        'sources', 
+        'invoice_settings.default_payment_method',
+        'default_source'
+      ]
+    }, { stripeAccount: context.stripeAccountId });
+    
+    if (expandedCustomer.deleted) {
+      return undefined;
+    }
+    
+    const customerProperties = stripeCustomerToNotionProperties(expandedCustomer as Stripe.Customer);
+    const customerResult = await upsertPageByTitle(
+      context.notionToken,
+      customerDatabaseId,
+      "Customer ID",
+      expandedCustomer.id,
+      customerProperties
+    );
+    
+    return customerResult.id;
+  } catch (error) {
+    await handleNotionError(error, context, 'customerDatabaseError');
+    throw error; // Re-throw so calling handlers know it failed
   }
-  
-  const customerProperties = stripeCustomerToNotionProperties(expandedCustomer as Stripe.Customer);
-  const customerResult = await upsertPageByTitle(
-    context.notionToken,
-    customerDatabaseId,
-    "Customer ID",
-    expandedCustomer.id,
-    customerProperties
-  );
-  
-  return customerResult.id;
 }
 
 export async function handleCustomerEvent(
@@ -88,11 +231,12 @@ export async function handleCustomerEvent(
 
     return { success: true };
   } catch (error) {
+    await handleNotionError(error, context, 'customerDatabaseError');
     console.error("Error upserting customer to Notion:", error);
     return { 
       success: false, 
       error: "Failed to update customer in Notion", 
-      statusCode: 500 
+      statusCode: 200 
     };
   }
 }
@@ -146,11 +290,12 @@ export async function handleChargeEvent(
 
     return { success: true };
   } catch (error) {
+    await handleNotionError(error, context, 'chargeDatabaseError');
     console.error("Error upserting charge to Notion:", error);
     return { 
       success: false, 
       error: "Failed to update charge in Notion", 
-      statusCode: 500 
+      statusCode: 200 
     };
   }
 }
@@ -207,11 +352,12 @@ export async function handleInvoiceEvent(
 
     return { success: true };
   } catch (error) {
+    await handleNotionError(error, context, 'invoiceDatabaseError');
     console.error("Error upserting invoice to Notion:", error);
     return { 
       success: false, 
       error: "Failed to update invoice in Notion", 
-      statusCode: 500 
+      statusCode: 200 
     };
   }
 }
@@ -297,11 +443,12 @@ export async function handleSubscriptionEvent(
 
     return { success: true };
   } catch (error) {
+    await handleNotionError(error, context, 'subscriptionDatabaseError');
     console.error("Error upserting subscription to Notion:", error);
     return { 
       success: false, 
       error: "Failed to update subscription in Notion", 
-      statusCode: 500 
+      statusCode: 200 
     };
   }
 }

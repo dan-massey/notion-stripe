@@ -68,7 +68,7 @@ export const stripeWebhookHandler = async (c: AppContext) => {
     )
   ) {
     return c.json({
-      message: "No active subscription, not syncing event to Notion.",
+      message: `No active subscription for ${modeFromUrl} ${stripeAccountId} not syncing event to Notion.`,
     });
   }
 
@@ -85,6 +85,7 @@ export const stripeWebhookHandler = async (c: AppContext) => {
     notionToken,
     stripeAccountId,
     membershipStatus,
+    membership,
   };
 
   // Execute the handler

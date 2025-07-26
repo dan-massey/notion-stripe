@@ -1,3 +1,4 @@
+import { useAccount } from "@/services/accountProvider";
 import { useNotionSignIn } from "@/services/notionSignInProvider";
 import { Button, Box, Icon, Spinner } from "@stripe/ui-extension-sdk/ui";
 import { useState } from "react";
@@ -5,7 +6,35 @@ import { useState } from "react";
 export const NotionSignIn = () => {
   const { isLoading, isSignedIn, signInUrl, signOut, checkAuthStatus } =
     useNotionSignIn();
+  const { account } = useAccount();
+
   const [confirm, setConfirm] = useState<boolean>(false);
+
+  const hasSignInError = !!account?.membership?.errors?.tokenError;
+
+  const getSignedInStatus = () => {
+    if (isSignedIn && !hasSignInError) {
+      return (
+        <Box css={{ stack: "x", gapX: "small", alignY: "center" }}>
+          <Icon name="checkCircle" css={{ fill: "success" }} /> Notion account
+          connected
+        </Box>
+      );
+    } else if (isSignedIn && hasSignInError) {
+      return (
+        <Box css={{ stack: "x", gapX: "small", alignY: "center" }}>
+          <Icon name="warningCircle" css={{ fill: "critical" }} /> Notion
+          account issue: {account.membership?.errors?.tokenError}
+        </Box>
+      );
+    }
+    return (
+      <Box css={{ stack: "x", gapX: "small", alignY: "center" }}>
+        <Icon name="warningCircle" css={{ fill: "critical" }} /> No Notion
+        account connected
+      </Box>
+    );
+  };
 
   if (confirm) {
     return (
@@ -93,17 +122,7 @@ export const NotionSignIn = () => {
           ) : (
             <Box css={{ stack: "y", gapY: "small" }}>
               <Box css={{ font: "heading" }}>Connect Stripe to Notion</Box>
-              {isSignedIn ? (
-                <Box css={{ stack: "x", gapX: "small", alignY: "center" }}>
-                  <Icon name="checkCircle" css={{ fill: "success" }} /> Notion
-                  account connected
-                </Box>
-              ) : (
-                <Box css={{ stack: "x", gapX: "small", alignY: "center" }}>
-                  <Icon name="warningCircle" css={{ fill: "critical" }} /> No
-                  Notion account connected
-                </Box>
-              )}
+              {getSignedInStatus()}
             </Box>
           )}
         </Box>
