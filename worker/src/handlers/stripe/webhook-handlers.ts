@@ -186,6 +186,8 @@ async function upsertCustomer(
       customerProperties
     );
     
+    // Clear any previous errors for customer database since we succeeded
+    await context.membership.setError('customerDatabaseError', null);
     return customerResult.id;
   } catch (error) {
     await handleNotionError(error, context, 'customerDatabaseError');
@@ -229,6 +231,8 @@ export async function handleCustomerEvent(
       properties
     );
 
+    // Clear any previous errors for this database since we succeeded
+    await context.membership.setError('customerDatabaseError', null);
     return { success: true };
   } catch (error) {
     await handleNotionError(error, context, 'customerDatabaseError');
@@ -288,6 +292,8 @@ export async function handleChargeEvent(
       properties
     );
 
+    // Clear any previous errors for this database since we succeeded
+    await context.membership.setError('chargeDatabaseError', null);
     return { success: true };
   } catch (error) {
     await handleNotionError(error, context, 'chargeDatabaseError');
@@ -350,6 +356,8 @@ export async function handleInvoiceEvent(
       properties
     );
 
+    // Clear any previous errors for this database since we succeeded
+    await context.membership.setError('invoiceDatabaseError', null);
     return { success: true };
   } catch (error) {
     await handleNotionError(error, context, 'invoiceDatabaseError');
@@ -441,6 +449,8 @@ export async function handleSubscriptionEvent(
       properties
     );
 
+    // Clear any previous errors for this database since we succeeded
+    await context.membership.setError('subscriptionDatabaseError', null);
     return { success: true };
   } catch (error) {
     await handleNotionError(error, context, 'subscriptionDatabaseError');
