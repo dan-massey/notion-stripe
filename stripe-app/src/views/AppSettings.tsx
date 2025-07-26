@@ -11,6 +11,7 @@ import { useAccount } from "@/services/accountProvider";
 import { Placeholder } from "@/components/Placeholder";
 import { Subscribe } from "@/components/Subscribe";
 import { ManageSubscription } from "@/components/ManageSubscription";
+import { Backfill } from "@/components/Backfill";
 
 const AppSettingsContent = () => {
   const { isSignedIn } = useNotionSignIn();
@@ -30,14 +31,14 @@ const AppSettingsContent = () => {
     } else {
       return <Subscribe />;
     }
-  }
+  };
 
   return (
     <Box css={{ stack: "y", width: "fill", gap: "medium" }}>
-      <Box css={{ width: "fill"}}>
+      <Box css={{ width: "fill" }}>
         <NotionSignIn />
       </Box>
-      <Box css={{ width: "fill"}}>
+      <Box css={{ width: "fill" }}>
         {isSignedIn ? (
           getStepTwo()
         ) : (
@@ -45,10 +46,25 @@ const AppSettingsContent = () => {
         )}
       </Box>
       <Box css={{ width: "fill" }}>
-        {(account?.membership?.parentPageId || account?.membership?.stripeSubscriptionId) ? (
+        {account?.membership?.parentPageId ||
+        account?.membership?.stripeSubscriptionId ? (
           getStepThree()
         ) : (
-          <Placeholder step="Step 3" title="Set up Billing (14 day free trial)" />
+          <Placeholder
+            step="Step 3"
+            title="Set up Billing (14 day free trial)"
+          />
+        )}
+      </Box>
+      <Box css={{ width: "fill" }}>
+        {account?.membership?.parentPageId &&
+        account?.membership?.stripeSubscriptionId &&
+        ["active", "trialing", "past_due"].includes(
+          account?.membership.stripeSubscriptionStatus ?? ""
+        ) ? (
+          <Backfill />
+        ) : (
+          <Placeholder step="Step 4" title="Sync historical data" />
         )}
       </Box>
     </Box>

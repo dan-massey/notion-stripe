@@ -2,7 +2,7 @@ import { Stripe } from "stripe";
 import { HTTPException } from "hono/http-exception";
 import type { AppContext, StripeMode } from "@/types";
 import { NotionSecretName } from "@/stripe-frontend-endpoints";
-const NOTION_SECRET_NAME: NotionSecretName = "NOTION_AUTH_TOKEN";
+export const NOTION_SECRET_NAME: NotionSecretName = "NOTION_AUTH_TOKEN";
 
 export const makeStripeClient = (c: AppContext, mode: StripeMode) => {
   if (mode === "live") {

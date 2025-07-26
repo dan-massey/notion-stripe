@@ -39,7 +39,20 @@
     "NOTION_OAUTH_CLIENT_ID": "239d872b-594c-8001-a978-003792846576",
     "BASE_URL": "https://notion.sync-to-db.com",
     "NOTION_AUTH_URL": "https://notion.sync-to-db.com/auth/callback"
-  }
+  },
+  "workflows": [
+    {
+      "name": "backfill-workflow",
+      "binding": "BACKFILL_WORKFLOW",
+      "class_name": "BackfillWorkflow"
+    }
+  ],
+  "kv_namespaces": [
+    {
+      "binding": "BACKFILL_KV",
+      "id": "5c0855deada244c3bf94905889504f5a"
+    }
+  ]
   /**
    * Smart Placement
    * Docs: https://developers.cloudflare.com/workers/configuration/smart-placement/#smart-placement

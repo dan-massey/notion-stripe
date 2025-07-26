@@ -6,8 +6,6 @@ export const NotionSignIn = () => {
   const { isLoading, isSignedIn, signInUrl, signOut, checkAuthStatus } =
     useNotionSignIn();
   const [confirm, setConfirm] = useState<boolean>(false);
-  console.log("isSignedIn", isSignedIn);
-  console.log("signInUrl", signInUrl);
 
   if (confirm) {
     return (

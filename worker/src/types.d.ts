@@ -15,3 +15,10 @@ export type Env = {
 };
 
 export type AppContext = HonoContext<Env>;
+
+export type BackfillWorkflowStatus = {
+startedAt: number;
+  status: 'started' | 'complete';
+  recordsProcessed: number;
+  finishedAt?: number;
+};
