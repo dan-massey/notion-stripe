@@ -1,6 +1,6 @@
 import { makeStripeClient } from "@/utils/stripe";
 import { handleCheckoutComplete } from "@/utils/membership";
-import { ensureMembershipDo } from "@/utils/do";
+import { ensureAccountDo } from "@/utils/do";
 import type { Stripe } from "stripe";
 import type { AppContext, StripeMode } from "@/types";
 
@@ -17,14 +17,14 @@ export const membershipWebhookHandler = async (c: AppContext) => {
     type: event.type,
     id: event.id,
     mode: mode,
-    subscriptionId: event.type.includes('subscription') ? event.data.object.id : 'N/A'
+    subscriptionId: event.type.includes('subscription') ? (event.data.object as any).id : 'N/A'
   });
 
   if (event.type === "checkout.session.completed") {
     await handleCheckoutComplete(
       stripe,
       mode,
-      c.env.MEMBERSHIP_DURABLE_OBJECT,
+      c.env.ACCOUNT_DURABLE_OBJECT,
       event
     );
     return c.json({ received: true });
@@ -38,7 +38,7 @@ export const membershipWebhookHandler = async (c: AppContext) => {
   const stripeAccountId: string = subscription.metadata.stripeAccountId;
   const subscriptionStatus: string = subscription.status;
 
-  const membership = await ensureMembershipDo(c, stripeAccountId, mode);
+  const accountDo = await ensureAccountDo(c, stripeAccountId, mode);
 
   console.log("Updating membership status for userId:", stripeAccountId);
   console.log("Subscription status:", subscriptionStatus);
@@ -46,11 +46,13 @@ export const membershipWebhookHandler = async (c: AppContext) => {
   console.log("Subscription cancel at:", subscription.cancel_at);
 
   if (subscriptionStatus === "canceled") {
-    await membership.deleteSubscription(stripeAccountId, mode);
+    await accountDo.deleteSubscription(stripeAccountId, mode);
   } else {
-    await membership.setStatus({
+    await accountDo.setSubscriptionStatus({
       stripeAccountId,
       stripeMode: mode,
+      stripeCustomerId: typeof subscription.customer === 'string' ? subscription.customer : subscription.customer.id,
+      stripeSubscriptionId: subscription.id,
       stripeSubscriptionStatus: subscriptionStatus,
       trialEnd: subscription.trial_end,
       cancelAt: subscription.cancel_at,

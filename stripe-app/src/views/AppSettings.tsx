@@ -18,7 +18,7 @@ const AppSettingsContent = () => {
   const { account } = useAccount();
 
   const getStepTwo = () => {
-    if (account?.membership?.parentPageId) {
+    if (account?.account?.notionConnection?.parentPageId) {
       return <NotionDatabasesLinked />;
     }
 
@@ -26,7 +26,7 @@ const AppSettingsContent = () => {
   };
 
   const getStepThree = () => {
-    if (account?.membership?.stripeSubscriptionId) {
+    if (account?.account?.subscription?.stripeSubscriptionId) {
       return <ManageSubscription />;
     } else {
       return <Subscribe />;
@@ -46,8 +46,8 @@ const AppSettingsContent = () => {
         )}
       </Box>
       <Box css={{ width: "fill" }}>
-        {account?.membership?.parentPageId ||
-        account?.membership?.stripeSubscriptionId ? (
+        {account?.account?.notionConnection?.parentPageId ||
+        account?.account?.subscription?.stripeSubscriptionId ? (
           getStepThree()
         ) : (
           <Placeholder
@@ -57,10 +57,10 @@ const AppSettingsContent = () => {
         )}
       </Box>
       <Box css={{ width: "fill" }}>
-        {account?.membership?.parentPageId &&
-        account?.membership?.stripeSubscriptionId &&
+        {account?.account?.notionConnection?.parentPageId &&
+        account?.account.subscription?.stripeSubscriptionId &&
         ["active", "trialing", "past_due"].includes(
-          account?.membership.stripeSubscriptionStatus ?? ""
+          account?.account.subscription?.stripeSubscriptionStatus ?? ""
         ) ? (
           <Backfill />
         ) : (

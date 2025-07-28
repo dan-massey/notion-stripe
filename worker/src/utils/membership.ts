@@ -1,11 +1,11 @@
 import type { Stripe } from "stripe";
-import type { MembershipDurableObject } from "@/membership-do";
+import type { AccountDurableObject } from "@/account-do";
 import { StripeMode } from "@/types";
 
 export const handleCheckoutComplete = async (
   stripe: Stripe,
   mode: StripeMode,
-  membershipDO: DurableObjectNamespace<MembershipDurableObject>,
+  accountDoStub: DurableObjectNamespace<AccountDurableObject>,
   event: Stripe.Event
 ) => {
   const session = event.data.object as Stripe.Checkout.Session;
@@ -33,7 +33,7 @@ export const handleCheckoutComplete = async (
       trialEnd = subObj.trial_end;
       cancelAt = subObj.cancel_at;
     } catch (error) {
-      console.error("Failed to retrieve subscription:", subscriptionId, "Error:", error.message);
+      console.error("Failed to retrieve subscription:", subscriptionId, "Error:", error instanceof Error ? error.message : String(error));
       throw error;
     }
   } else if (session.subscription) {
@@ -49,8 +49,8 @@ export const handleCheckoutComplete = async (
   if (!stripeAccountId) {
     throw new Error("Stripe account ID not found.");
   }
-  const id = membershipDO.idFromName(stripeAccountId);
-  const membership = await membershipDO.get(id);
+  const id = accountDoStub.idFromName(stripeAccountId);
+  const acountDo = await accountDoStub.get(id);
 
   await stripe.subscriptions.update(subscriptionId, {
     metadata: {
@@ -58,7 +58,7 @@ export const handleCheckoutComplete = async (
     },
   });
 
-  await membership.setUp({
+  await acountDo.setSubscriptionStatus({
     stripeAccountId: stripeAccountId,
     stripeCustomerId: customerId,
     stripeSubscriptionId: subscriptionId,

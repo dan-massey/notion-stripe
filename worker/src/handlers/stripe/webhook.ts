@@ -1,23 +1,20 @@
 import type { AppContext, StripeMode } from "@/types";
-import { ensureMembershipDo } from "@/utils/do";
+import { ensureAccountDo } from "@/utils/do";
 import { getNotionToken } from "@/utils/stripe";
 import {
   handleCustomerEvent,
   handleChargeEvent,
   handleInvoiceEvent,
   handleSubscriptionEvent,
+  type HandlerContext,
+  type HandlerResult,
 } from "./webhook-handlers";
 import type Stripe from "stripe";
 
 type WebhookEventHandler = (
   event: Stripe.Event,
-  context: any
-) => Promise<{
-  success: boolean;
-  message?: string;
-  error?: string;
-  statusCode?: number;
-}>;
+  context: HandlerContext
+) => Promise<HandlerResult>;
 
 const EVENT_HANDLERS: Record<string, WebhookEventHandler> = {
   customer: handleCustomerEvent,
@@ -48,12 +45,13 @@ export const stripeWebhookHandler = async (c: AppContext) => {
 
   // Get required resources in parallel
   const notionTokenPromise = getNotionToken(c, stripeAccountId);
-  const membershipPromise = ensureMembershipDo(c, stripeAccountId, modeFromUrl);
-  const [notionToken, membership] = await Promise.all([
+  const accountPromise = ensureAccountDo(c, stripeAccountId, modeFromUrl);
+  const [notionToken, account] = await Promise.all([
     notionTokenPromise,
-    membershipPromise,
+    accountPromise,
   ]);
-  const membershipStatus = await membership.getStatus();
+
+  const accountStatus = await account.getStatus();
 
   // Check if we have a Notion token
   if (!notionToken) {
@@ -61,10 +59,15 @@ export const stripeWebhookHandler = async (c: AppContext) => {
     return c.json({ message: "No Notion token available" });
   }
 
+  if (!accountStatus) {
+    console.warn("No account status available");
+    return c.json({ message: "No account status available" });
+  }
+
   if (
-    !membershipStatus?.stripeSubscriptionId &&
+    !accountStatus?.subscription?.stripeSubscriptionId &&
     !["active", "trialing", "past_due"].includes(
-      membershipStatus?.stripeSubscriptionStatus ?? ""
+      accountStatus?.subscription?.stripeSubscriptionStatus ?? ""
     )
   ) {
     return c.json({
@@ -80,12 +83,12 @@ export const stripeWebhookHandler = async (c: AppContext) => {
   }
 
   // Create context for the handler
-  const context = {
+  const context: HandlerContext = {
     stripe: c.get("stripe"),
     notionToken,
     stripeAccountId,
-    membershipStatus,
-    membership,
+    accountStatus,
+    account,
   };
 
   // Execute the handler

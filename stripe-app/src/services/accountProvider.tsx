@@ -10,24 +10,12 @@ import type { ResponseForEndpoint } from "@worker/stripe-frontend-endpoints";
 
 type AccountData = ResponseForEndpoint<"/stripe/membership">;
 
-type DatabaseIds = {
-  parentPageId: string | null;
-  customerDatabaseId: string | null;
-  invoiceDatabaseId: string | null;
-  chargeDatabaseId: string | null;
-};
-
 interface AccountContextType {
   account: AccountData | null;
   loading: boolean;
   error: string | null;
+  setAccountDetails: (accountDetails: AccountData["account"]) => Promise<void>;
   refetch: () => Promise<void>;
-  setDatabaseIds: ({
-    parentPageId,
-    customerDatabaseId,
-    invoiceDatabaseId,
-    chargeDatabaseId,
-  }: DatabaseIds) => void;
 }
 
 const AccountContext = createContext<AccountContextType | undefined>(undefined);
@@ -43,30 +31,6 @@ export const AccountProvider: React.FC<AccountProviderProps> = ({
   const [account, setAccount] = useState<AccountData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-
-  const setDatabaseIds = ({
-    parentPageId,
-    customerDatabaseId,
-    invoiceDatabaseId,
-    chargeDatabaseId,
-  }: DatabaseIds) => {
-    if (account) {
-      const oldMembershipInfo = account.membership;
-      const newMembershipInfo = {
-        ...oldMembershipInfo,
-        parentPageId,
-        customerDatabaseId,
-        invoiceDatabaseId,
-        chargeDatabaseId,
-        errors: null
-      } as typeof oldMembershipInfo;
-      setAccount({
-        ...account,
-        membership: newMembershipInfo,
-      });
-    }
-  };
-
 
   const fetchMembership = async () => {
     try {
@@ -88,13 +52,22 @@ export const AccountProvider: React.FC<AccountProviderProps> = ({
     fetchMembership();
   }, []);
 
+  const setAccountDetails = async (accountDetails: AccountData["account"]) => {
+    if (account) {
+      setAccount({
+        ...account,
+        account: accountDetails
+      });
+    }
+  };
+
   return (
     <AccountContext.Provider
       value={{
         account,
         loading,
         error,
-        setDatabaseIds,
+        setAccountDetails,
         refetch: fetchMembership,
       }}
     >

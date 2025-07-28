@@ -1,6 +1,6 @@
 import type { AppContext, StripeMode } from "@/types";
-import { ensureMembershipDo } from "@/utils/do";
-import type { MembershipResponse } from "@/stripe-frontend-endpoints";
+import { ensureAccountDo } from "@/utils/do";
+import type { AccountResponse } from "@/stripe-frontend-endpoints";
 const checkoutLinks = {
   test: "https://buy.stripe.com/test_bJe9ASfRtdBXd6CeDbc3m00",
   live: "https://buy.stripe.com/8x2cN45cPapLfeK8eNc3m01",
@@ -18,22 +18,25 @@ export const getMembership = async (c: AppContext) => {
     return c.json({ message: "Stripe account ID not found" }, 400);
   }
 
-  const membership = await ensureMembershipDo(c, stripeAccountId, mode);
-  const membershipData = await membership.getStatus();
+  const accountDo = await ensureAccountDo(c, stripeAccountId, mode);
+  const accountData = await accountDo.getStatus();
 
-  let resp: MembershipResponse = {
+  if (!accountData) {
+    throw new Error("Account Data object not ensured!");
+  }
+
+  let resp: AccountResponse = {
     checkoutUrl: `${checkoutLinks[mode]}?client_reference_id=${stripeAccountId}`,
-    membership: membershipData
+    account: accountData
   };
-  if (!membershipData || !membershipData.stripeCustomerId) {
+  if (!accountData || !accountData.subscription?.stripeCustomerId) {
     return c.json(resp);
   }
 
-  console.log(membershipData);
   let url: string | undefined = undefined;
   try {
     const session = await stripe.billingPortal.sessions.create({
-      customer: membershipData.stripeCustomerId,
+      customer: accountData.subscription.stripeCustomerId,
     });
     url = session.url;
   } catch (e) {
@@ -45,7 +48,7 @@ export const getMembership = async (c: AppContext) => {
     stripeMode: mode,
     stripeAccountId,
     stripeUserId: c.get("stripeUserId"),
-    membership: membershipData,
+    account: accountData,
     manageSubscriptionUrl: url,
   };
 
@@ -59,7 +62,7 @@ export const getMembershipStatus = async (c: AppContext) => {
     return c.json({ message: "Stripe account ID not found" }, 400);
   }
 
-  const membership = await ensureMembershipDo(c, stripeAccountId, mode);
+  const membership = await ensureAccountDo(c, stripeAccountId, mode);
   const status = await membership.getStatus();
 
   return c.json({ status });

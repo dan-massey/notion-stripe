@@ -3,30 +3,27 @@
 // cross-compilation fails when the stripe-app tries to resolve the worker's @/ paths.
 // Using relative imports keeps this file self-contained for cross-workspace usage.
 import type { HelloWorldResponse } from "./handlers/stripe/helloworld";
-import type {
-  DatabaseSetupResponse,
-  DatabaseClearResponse,
-} from "./handlers/stripe/notion";
-import type { SearchResult } from "./utils/notion";
+import type { SearchResult } from "./utils/notion-api";
 import type { StripeMode, BackfillWorkflowStatus } from "./types";
-import type { MembershipStatus } from "./membership-do";
+import type { AccountStatus } from "./account-do";
 import {
   clearDatabaseLinks,
   deleteNotionAuth,
   getNotionLink,
   getNotionPages,
   setUpDatabases,
+  validateAuth,
 } from "./handlers/stripe/notion";
 import { getMembership } from "./handlers/stripe/membership";
 import { helloWorldHandler } from "./handlers/stripe/helloworld";
 import { getBackfillStatus, startBackfill } from "./handlers/stripe/backfill";
 
-export type MembershipResponse = {
+export type AccountResponse = {
   checkoutUrl: string;
   stripeMode?: StripeMode;
   stripeAccountId?: string;
   stripeUserId?: string;
-  membership?: MembershipStatus;
+  account?: AccountStatus;
   manageSubscriptionUrl?: string;
 };
 
@@ -47,7 +44,7 @@ export const ENDPOINTS = {
   membership: {
     path: "/stripe/membership",
     methods: ["GET", "POST"],
-    response: {} as MembershipResponse,
+    response: {} as AccountResponse,
     handler: getMembership,
   },
   notionLink: {
@@ -55,6 +52,12 @@ export const ENDPOINTS = {
     methods: ["GET"],
     response: {} as { url: string },
     handler: getNotionLink,
+  },
+  validateNotionAuth: {
+    path: "/stripe/notion-auth/validate",
+    methods: ["GET"],
+    response: {} as { authed: boolean },
+    handler: validateAuth,
   },
   notionPages: {
     path: "/stripe/notion/pages",
@@ -65,19 +68,19 @@ export const ENDPOINTS = {
   setUpDatabases: {
     path: "/stripe/notion/databases",
     methods: ["POST"],
-    response: {} as DatabaseSetupResponse,
+    response: {} as AccountStatus,
     handler: setUpDatabases,
   },
   clearDatabases: {
     path: "/stripe/notion/databases/clear",
     methods: ["POST"],
-    response: {} as DatabaseClearResponse,
+    response: {} as AccountStatus,
     handler: clearDatabaseLinks,
   },
   deleteNotionAuth: {
     path: "/stripe/notion-auth/delete",
     methods: ["POST"],
-    response: {} as { message: string },
+    response: {} as AccountStatus,
     handler: deleteNotionAuth,
   },
   startBackfill: {

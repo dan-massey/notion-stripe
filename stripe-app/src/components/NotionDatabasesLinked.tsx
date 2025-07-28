@@ -18,11 +18,13 @@ const makeNotionLink = (pageId: string | null | undefined) => {
 
 export const NotionDatabasesLinked: React.FC = () => {
   const { postTyped } = useApi();
-  const { account, setDatabaseIds } = useAccount();
+  const { account, setAccountDetails } = useAccount();
 
   const [resettingDatabases, setResettingDatabases] = useState(false);
   const [confirm, setConfirm] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
+
+  const databases = account?.account?.notionConnection?.databases;
 
   const resetDatabases = async () => {
     try {
@@ -30,7 +32,7 @@ export const NotionDatabasesLinked: React.FC = () => {
       setError(null);
 
       const response = await postTyped("/stripe/notion/databases/clear");
-      setDatabaseIds(response);
+      setAccountDetails(response);
     } catch (err) {
       setError(
         err instanceof Error ? err.message : "Failed to reset databases"
@@ -135,49 +137,49 @@ export const NotionDatabasesLinked: React.FC = () => {
       <Box css={{ stack: "y", gapY: "small" }}>
         <Link
           target="_blank"
-          href={makeNotionLink(account?.membership?.customerDatabaseId)}
+          href={makeNotionLink(databases?.customer.pageId)}
         >
           👥 Customers Database{" "}
-          {account?.membership?.errors?.customerDatabaseError && (
+          {databases?.customer.lastError && (
             <Inline css={{ color: "critical" }}>
               Something is wrong with this database:{" "}
-              {account?.membership?.errors?.customerDatabaseError}
+              {databases?.customer.lastError}
             </Inline>
           )}
         </Link>
         <Link
           target="_blank"
-          href={makeNotionLink(account?.membership?.chargeDatabaseId)}
+          href={makeNotionLink(databases?.charge.pageId)}
         >
           💳 Charges Database{" "}
-          {account?.membership?.errors?.chargeDatabaseError && (
+          {databases?.charge.lastError && (
             <Inline css={{ color: "critical" }}>
               Something is wrong with this database:{" "}
-              {account?.membership?.errors?.chargeDatabaseError}
+              {databases?.charge.lastError}
             </Inline>
           )}
         </Link>
         <Link
           target="_blank"
-          href={makeNotionLink(account?.membership?.subscriptionDatabaseId)}
+          href={makeNotionLink(databases?.subscription.pageId)}
         >
           🔄 Subscriptions Database{" "}
-          {account?.membership?.errors?.subscriptionDatabaseError && (
+          {databases?.subscription.lastError && (
             <Inline css={{ color: "critical" }}>
               Something is wrong with this database:{" "}
-              {account?.membership?.errors?.subscriptionDatabaseError}
+              {databases?.subscription.lastError}
             </Inline>
           )}
         </Link>
         <Link
           target="_blank"
-          href={makeNotionLink(account?.membership?.invoiceDatabaseId)}
+          href={makeNotionLink(databases?.invoice.pageId)}
         >
           📄 Invoices Database{" "}
-          {account?.membership?.errors?.invoiceDatabaseError && (
+          {databases?.invoice.lastError && (
             <Inline css={{ color: "critical" }}>
               Something is wrong with this database:{" "}
-              {account?.membership?.errors?.invoiceDatabaseError}
+              {databases?.invoice.lastError}
             </Inline>
           )}
         </Link>
@@ -208,7 +210,7 @@ export const NotionDatabasesLinked: React.FC = () => {
         <Button
           type="secondary"
           css={{ width: "1/2" }}
-          href={makeNotionLink(account?.membership?.parentPageId)}
+          href={makeNotionLink(account?.account?.notionConnection?.parentPageId)}
           target="_blank"
         >
           <Icon name="external" />

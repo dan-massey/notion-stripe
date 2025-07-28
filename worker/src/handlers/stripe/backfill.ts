@@ -1,5 +1,5 @@
 import type { AppContext } from "@/types";
-import { getStatus, setStatus } from "@/utils/backfillStatus";
+import { getStatus, setStatus } from "@/utils/backfill-status";
 
 export const startBackfill = async (c: AppContext) => {
   await c.env.BACKFILL_WORKFLOW.create({

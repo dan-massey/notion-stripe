@@ -60,5 +60,5 @@ app.post(
 );
 
 export default app;
-export { MembershipDurableObject } from "./membership-do";
+export { AccountDurableObject } from "./account-do";
 export { BackfillWorkflow } from "./workflow";

@@ -1,21 +1,21 @@
 import type { AppContext, StripeMode } from "@/types";
-import { upsertPageByTitle } from "@/utils/notion";
-import { stripeCustomerToNotionProperties } from "@/utils/customer";
-import { stripeChargeToNotionProperties } from "@/utils/charge";
-import { stripeInvoiceToNotionProperties } from "@/utils/invoice";
-import { stripeSubscriptionToNotionProperties } from "@/utils/subscription";
-import type { MembershipStatus, MembershipDurableObject } from "@/membership-do";
+import { upsertPageByTitle } from "@/utils/notion-api";
+import { stripeCustomerToNotionProperties } from "@/conversion/customer";
+import { stripeChargeToNotionProperties } from "@/conversion/charge";
+import { stripeInvoiceToNotionProperties } from "@/conversion/invoice";
+import { stripeSubscriptionToNotionProperties } from "@/conversion/subscription";
+import type { AccountStatus, AccountDurableObject } from "@/account-do";
 import type Stripe from "stripe";
 
-interface HandlerContext {
+export interface HandlerContext {
   stripe: Stripe;
   notionToken: string;
   stripeAccountId: string;
-  membershipStatus: MembershipStatus;
-  membership: MembershipDurableObject;
+  accountStatus: AccountStatus;
+  account: DurableObjectStub<AccountDurableObject>;
 }
 
-interface HandlerResult {
+export interface HandlerResult {
   success: boolean;
   message?: string;
   error?: string;
@@ -25,7 +25,7 @@ interface HandlerResult {
 async function handleNotionError(
   error: unknown,
   context: HandlerContext,
-  databaseType: 'customerDatabaseError' | 'invoiceDatabaseError' | 'chargeDatabaseError' | 'subscriptionDatabaseError'
+  databaseType: 'customer' | 'invoice' | 'charge' | 'subscription'
 ): Promise<void> {
   let errorMessage = 'Unknown Notion API error';
   let errorField: 'tokenError' | typeof databaseType = databaseType;
@@ -150,11 +150,11 @@ async function handleNotionError(
   console.error(`Notion API error for ${databaseType}:`, errorMessage);
   
   if (errorField === 'tokenError') {
-    await context.membership.setError('tokenError', errorMessage);
+    await context.account.setTokenError(errorMessage);
   } else {
     // If it's a database error, the token must be valid, so clear any token error
-    await context.membership.setError('tokenError', null);
-    await context.membership.setError(errorField, errorMessage);
+    await context.account.setTokenError(null);
+    await context.account.setEntityError(errorField, errorMessage);
   }
 }
 
@@ -187,10 +187,10 @@ async function upsertCustomer(
     );
     
     // Clear any previous errors for customer database since we succeeded
-    await context.membership.setError('customerDatabaseError', null);
+    await context.account.setEntityError('customer', null);
     return customerResult.id;
   } catch (error) {
-    await handleNotionError(error, context, 'customerDatabaseError');
+    await handleNotionError(error, context, 'customer');
     throw error; // Re-throw so calling handlers know it failed
   }
 }
@@ -200,7 +200,7 @@ export async function handleCustomerEvent(
   context: HandlerContext
 ): Promise<HandlerResult> {
   const customer = event.data.object as Stripe.Customer;
-  const customerDatabaseId = context.membershipStatus?.customerDatabaseId;
+  const customerDatabaseId = context.accountStatus.notionConnection?.databases?.customer.pageId;
   
   if (!customerDatabaseId) {
     console.warn("No customer database set up");
@@ -232,10 +232,10 @@ export async function handleCustomerEvent(
     );
 
     // Clear any previous errors for this database since we succeeded
-    await context.membership.setError('customerDatabaseError', null);
+    await context.account.setEntityError('customer', null);
     return { success: true };
   } catch (error) {
-    await handleNotionError(error, context, 'customerDatabaseError');
+    await handleNotionError(error, context, 'customer');
     console.error("Error upserting customer to Notion:", error);
     return { 
       success: false, 
@@ -250,8 +250,8 @@ export async function handleChargeEvent(
   context: HandlerContext
 ): Promise<HandlerResult> {
   const charge = event.data.object as Stripe.Charge;
-  const chargeDatabaseId = context.membershipStatus?.chargeDatabaseId;
-  const customerDatabaseId = context.membershipStatus?.customerDatabaseId;
+  const chargeDatabaseId = context.accountStatus.notionConnection?.databases?.charge?.pageId;
+  const customerDatabaseId = context.accountStatus.notionConnection?.databases?.customer.pageId;
   
   if (!chargeDatabaseId) {
     console.warn("No charge database set up");
@@ -293,10 +293,10 @@ export async function handleChargeEvent(
     );
 
     // Clear any previous errors for this database since we succeeded
-    await context.membership.setError('chargeDatabaseError', null);
+    await context.account.setEntityError('charge', null);
     return { success: true };
   } catch (error) {
-    await handleNotionError(error, context, 'chargeDatabaseError');
+    await handleNotionError(error, context, 'charge');
     console.error("Error upserting charge to Notion:", error);
     return { 
       success: false, 
@@ -311,8 +311,8 @@ export async function handleInvoiceEvent(
   context: HandlerContext
 ): Promise<HandlerResult> {
   const invoice = event.data.object as Stripe.Invoice;
-  const invoiceDatabaseId = context.membershipStatus?.invoiceDatabaseId;
-  const customerDatabaseId = context.membershipStatus?.customerDatabaseId;
+  const invoiceDatabaseId = context.accountStatus.notionConnection?.databases?.invoice?.pageId;
+  const customerDatabaseId = context.accountStatus.notionConnection?.databases?.customer.pageId;
   
   if (!invoiceDatabaseId) {
     console.warn("No invoice database set up");
@@ -357,10 +357,10 @@ export async function handleInvoiceEvent(
     );
 
     // Clear any previous errors for this database since we succeeded
-    await context.membership.setError('invoiceDatabaseError', null);
+    await context.account.setEntityError('invoice', null);
     return { success: true };
   } catch (error) {
-    await handleNotionError(error, context, 'invoiceDatabaseError');
+    await handleNotionError(error, context, 'invoice');
     console.error("Error upserting invoice to Notion:", error);
     return { 
       success: false, 
@@ -375,9 +375,9 @@ export async function handleSubscriptionEvent(
   context: HandlerContext
 ): Promise<HandlerResult> {
   const subscription = event.data.object as Stripe.Subscription;
-  const subscriptionDatabaseId = context.membershipStatus?.subscriptionDatabaseId;
-  const customerDatabaseId = context.membershipStatus?.customerDatabaseId;
-  const invoiceDatabaseId = context.membershipStatus?.invoiceDatabaseId;
+  const subscriptionDatabaseId = context.accountStatus.notionConnection?.databases?.subscription.pageId;
+  const customerDatabaseId = context.accountStatus.notionConnection?.databases?.customer.pageId;
+  const invoiceDatabaseId = context.accountStatus.notionConnection?.databases?.invoice.pageId;
   
   if (!subscriptionDatabaseId) {
     console.warn("No subscription database set up");
@@ -450,10 +450,10 @@ export async function handleSubscriptionEvent(
     );
 
     // Clear any previous errors for this database since we succeeded
-    await context.membership.setError('subscriptionDatabaseError', null);
+    await context.account.setEntityError('subscription', null);
     return { success: true };
   } catch (error) {
-    await handleNotionError(error, context, 'subscriptionDatabaseError');
+    await handleNotionError(error, context, 'subscription');
     console.error("Error upserting subscription to Notion:", error);
     return { 
       success: false, 

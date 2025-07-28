@@ -14,6 +14,7 @@ const statusToDescription = {
 
 export const ManageSubscription = () => {
   const { account, loading, error, refetch } = useAccount();
+  const subscription = account?.account?.subscription;
   return (
     <Box
       css={{
@@ -30,22 +31,22 @@ export const ManageSubscription = () => {
         Subscription{": "}
         {
           statusToDescription[
-            account?.membership
-              ?.stripeSubscriptionStatus as keyof typeof statusToDescription
+            
+              subscription?.stripeSubscriptionStatus as keyof typeof statusToDescription
           ]
         }
-        {account?.membership?.cancelAt && (
+        {subscription?.cancelAt && (
           <Box>
             {" "}
             Your subscription will cancel at{" "}
-            {new Date(account.membership.cancelAt * 1000).toLocaleString()}
+            {new Date(subscription?.cancelAt * 1000).toLocaleString()}
           </Box>
         )}
-        {account?.membership?.trialEnd && (
+        {subscription?.trialEnd && (
           <Box>
             {" "}
             Your free trial will end at{" "}
-            {new Date(account.membership.trialEnd * 1000).toLocaleString()}
+            {new Date(subscription?.trialEnd * 1000).toLocaleString()}
           </Box>
         )}
       </Box>

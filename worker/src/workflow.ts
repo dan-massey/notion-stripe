@@ -5,13 +5,13 @@ import {
 } from "cloudflare:workers";
 import type { StripeMode } from "@/types";
 import { Stripe } from "stripe";
-import { stripeCustomerToNotionProperties } from "@/utils/customer";
-import { stripeChargeToNotionProperties } from "@/utils/charge";
-import { stripeInvoiceToNotionProperties } from "@/utils/invoice";
-import { stripeSubscriptionToNotionProperties } from "@/utils/subscription";
+import { stripeCustomerToNotionProperties } from "@/conversion/customer";
+import { stripeChargeToNotionProperties } from "@/conversion/charge";
+import { stripeInvoiceToNotionProperties } from "@/conversion/invoice";
+import { stripeSubscriptionToNotionProperties } from "@/conversion/subscription";
 import { NOTION_SECRET_NAME } from "@/utils/stripe";
-import { upsertPageByTitle } from "@/utils/notion";
-import { getStatus, setStatus } from "@/utils/backfillStatus";
+import { upsertPageByTitle } from "@/utils/notion-api";
+import { getStatus, setStatus } from "@/utils/backfill-status";
 
 const ALL_ENTITIES = ["customer", "charge", "invoice", "subscription"] as const;
 type Entity = (typeof ALL_ENTITIES)[number];
@@ -233,17 +233,17 @@ export class BackfillWorkflow extends WorkflowEntrypoint<
     }
 
     const databaseIds = await step.do("Get membership info", async () => {
-      const id = this.env.MEMBERSHIP_DURABLE_OBJECT.idFromName(
+      const id = this.env.ACCOUNT_DURABLE_OBJECT.idFromName(
         event.payload.stripeAccountId
       );
-      const membershipDo = this.env.MEMBERSHIP_DURABLE_OBJECT.get(id);
+      const membershipDo = this.env.ACCOUNT_DURABLE_OBJECT.get(id);
       const info = await membershipDo.getStatus();
 
       return {
-        subscriptionDatabaseId: info?.subscriptionDatabaseId,
-        customerDatabaseId: info?.customerDatabaseId,
-        chargeDatabaseId: info?.chargeDatabaseId,
-        invoiceDatabaseId: info?.invoiceDatabaseId,
+        subscriptionDatabaseId: info?.notionConnection?.databases?.subscription.pageId,
+        customerDatabaseId: info?.notionConnection?.databases?.customer.pageId,
+        chargeDatabaseId: info?.notionConnection?.databases?.charge.pageId,
+        invoiceDatabaseId: info?.notionConnection?.databases?.invoice.pageId,
       };
     });
 

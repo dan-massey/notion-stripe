@@ -37,7 +37,7 @@ const getLabelFromPage = (page: NotionPagesResponse["results"][0]) => {
 
 export const NotionPageSelector: React.FC = () => {
   const { getTyped, postTyped } = useApi();
-  const { setDatabaseIds } = useAccount();
+  const { setAccountDetails } = useAccount();
   const { isSignedIn } = useNotionSignIn();
 
   const [pages, setPages] = useState<NotionPagesResponse["results"]>([]);
@@ -116,7 +116,7 @@ export const NotionPageSelector: React.FC = () => {
       const response = await postTyped("/stripe/notion/databases", null, {
         parentPageId: selectedPageId,
       });
-      setDatabaseIds(response);
+      setAccountDetails(response);
     } catch (err) {
       setError(
         err instanceof Error ? err.message : "Failed to create databases"

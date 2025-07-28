@@ -33,7 +33,7 @@ export const NotionSignInProvider: React.FC<NotionSignInProviderProps> = ({
   children,
 }) => {
   const { getTyped, postTyped } = useApi();
-  const { setDatabaseIds } = useAccount();
+  const { setAccountDetails } = useAccount();
 
   // Authentication state
   const [isSignedIn, setIsSignedIn] = useState(false);
@@ -46,27 +46,12 @@ export const NotionSignInProvider: React.FC<NotionSignInProviderProps> = ({
     try {
       setIsLoading(true);
       setAuthError(null);
-      const responsePromise = getTyped("/stripe/notion-auth/link");
+      const signInLinkPromise = getTyped("/stripe/notion-auth/link");
+      const validatePromise = getTyped("/stripe/notion-auth/validate");
+      const [signInLink, authSecretValid] = await Promise.all([signInLinkPromise, validatePromise]);
 
-      const secretsPromise = stripe.apps.secrets.list({
-        scope: {
-          type: "account",
-        },
-      });
-
-      const [response, secrets] = await Promise.all([
-        responsePromise,
-        secretsPromise,
-      ]);
-
-      const notionAuthSecret = secrets.data.find(
-        (secret) => secret.name === notionSecretName
-      );
-      
-      // Set authentication status based on whether we found the secret
-      const hasValidSecret = notionAuthSecret !== undefined;
-      setIsSignedIn(hasValidSecret);
-      setSignInUrl(response.url);
+      setIsSignedIn(authSecretValid.authed);
+      setSignInUrl(signInLink.url);
     } catch (err) {
       setAuthError(
         err instanceof Error ? err.message : "Failed to check auth status"
@@ -82,15 +67,10 @@ export const NotionSignInProvider: React.FC<NotionSignInProviderProps> = ({
     try {
       setIsLoading(true);
       setAuthError(null);
-      await postTyped("/stripe/notion-auth/delete");
+      const resp = await postTyped("/stripe/notion-auth/delete");
       setIsSignedIn(false);
       // Clear database IDs when signing out
-      setDatabaseIds({
-        parentPageId: null,
-        customerDatabaseId: null,
-        invoiceDatabaseId: null,
-        chargeDatabaseId: null,
-      });
+      setAccountDetails(resp);
     } catch (err) {
       setAuthError(err instanceof Error ? err.message : "Failed to sign out");
     } finally {

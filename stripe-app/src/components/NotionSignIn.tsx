@@ -10,7 +10,7 @@ export const NotionSignIn = () => {
 
   const [confirm, setConfirm] = useState<boolean>(false);
 
-  const hasSignInError = !!account?.membership?.errors?.tokenError;
+  const hasSignInError = !!account?.account?.tokenError;
 
   const getSignedInStatus = () => {
     if (isSignedIn && !hasSignInError) {
@@ -24,7 +24,7 @@ export const NotionSignIn = () => {
       return (
         <Box css={{ stack: "x", gapX: "small", alignY: "center" }}>
           <Icon name="warningCircle" css={{ fill: "critical" }} /> Notion
-          account issue: {account.membership?.errors?.tokenError}
+          account issue: {account?.account?.tokenError}
         </Box>
       );
     }

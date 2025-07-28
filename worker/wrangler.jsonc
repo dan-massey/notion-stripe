@@ -24,8 +24,8 @@
   "durable_objects": {
     "bindings": [
       {
-        "name": "MEMBERSHIP_DURABLE_OBJECT",
-        "class_name": "MembershipDurableObject"
+        "name": "ACCOUNT_DURABLE_OBJECT",
+        "class_name": "AccountDurableObject"
       }
     ]
   },
@@ -33,6 +33,11 @@
     {
       "tag": "v1",
       "new_sqlite_classes": ["MembershipDurableObject"]
+    },
+    {
+      "tag": "v2",
+      "deleted_classes": ["MembershipDurableObject"],
+      "new_sqlite_classes": ["AccountDurableObject"]
     }
   ],
   "vars": {
