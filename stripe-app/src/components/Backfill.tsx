@@ -70,8 +70,7 @@ export const Backfill = () => {
           <Box css={{ font: "heading" }}>Sync historical data</Box>
         </Box>
         <Box>
-          Syncing historical data is slow and could take a long time to complete, depending on how many
-          entities are in your account. You can leave this page once the sync
+          Syncing historical data is slow and will take a long time to complete. You can leave this page once the sync
           has started.
         </Box>
         {backfillStatus && backfillStatus?.status?.status === "started" && (
@@ -81,7 +80,8 @@ export const Backfill = () => {
               {new Date(backfillStatus.status.startedAt).toLocaleString()}.
             </Box>
             <Box>
-              {backfillStatus.status.recordsProcessed === 0 ? 'Getting started' : `${backfillStatus.status.recordsProcessed} rows synced so far.`} 
+              {backfillStatus.status.recordsProcessed === 0 ? 'Getting started' : `${backfillStatus.status.recordsProcessed} rows synced so far`} 
+              {backfillStatus.status.currentEntity && `, currently exporting ${backfillStatus.status.currentEntity} records.`}
             </Box>
           </>
         )}

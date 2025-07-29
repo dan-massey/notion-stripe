@@ -1,4 +1,17 @@
 import type Stripe from "stripe";
+import {
+  createTitleProperty,
+  createRichTextProperty,
+  createCheckboxProperty,
+  createEmailProperty,
+  createUrlProperty,
+  createDateProperty,
+  createNumberProperty,
+  createSelectProperty,
+  stringFromObject,
+  createPhoneProperty,
+  createRelationProperty,
+} from "@/utils/notion-properties";
 
 export function stripeChargeToNotionProperties(
   charge: Stripe.Charge,
@@ -6,187 +19,52 @@ export function stripeChargeToNotionProperties(
   paymentIntentNotionPageId: string | null
 ) {
   const properties: Record<string, any> = {
-    "Charge ID": {
-      title: [
-        {
-          type: "text",
-          text: {
-            content: charge.id,
-          },
-        },
-      ],
-    },
-    Amount: {
-      number: charge.amount,
-    },
-    "Amount Captured": {
-      number: charge.amount_captured,
-    },
-    "Amount Refunded": {
-      number: charge.amount_refunded,
-    },
-    Currency: {
-      rich_text: [
-        {
-          type: "text",
-          text: {
-            content: charge.currency?.toUpperCase() || "",
-          },
-        },
-      ],
-    },
-    Status: {
-      select: charge.status ? { name: charge.status } : null,
-    },
-    Paid: {
-      checkbox: charge.paid || false,
-    },
-    Captured: {
-      checkbox: charge.captured || false,
-    },
-    Refunded: {
-      checkbox: charge.refunded || false,
-    },
-    Disputed: {
-      checkbox: charge.disputed || false,
-    },
-    "Live Mode": {
-      checkbox: charge.livemode || false,
-    },
-    "Created Date": {
-      date: {
-        start: new Date(charge.created * 1000).toISOString().split("T")[0],
-      },
-    },
-    Description: {
-      rich_text: [
-        {
-          type: "text",
-          text: {
-            content: charge.description || "",
-          },
-        },
-      ],
-    },
-    "Receipt Email": {
-      email: charge.receipt_email || null,
-    },
-    "Receipt URL": {
-      url: charge.receipt_url || null,
-    },
-    "Statement Descriptor": {
-      rich_text: [
-        {
-          type: "text",
-          text: {
-            content: charge.statement_descriptor || "",
-          },
-        },
-      ],
-    },
-    "Balance Transaction": {
-      rich_text: [
-        {
-          type: "text",
-          text: {
-            content:
-              typeof charge.balance_transaction === "string"
-                ? charge.balance_transaction
-                : charge.balance_transaction?.id || "",
-          },
-        },
-      ],
-    },
-    Application: {
-      rich_text: [
-        {
-          type: "text",
-          text: {
-            content: charge.application || "",
-          },
-        },
-      ],
-    },
-    "Application Fee Amount": {
-      number: charge.application_fee_amount || null,
-    },
-    Transfer: {
-      rich_text: [
-        {
-          type: "text",
-          text: {
-            content: charge.transfer || "",
-          },
-        },
-      ],
-    },
-    "Transfer Group": {
-      rich_text: [
-        {
-          type: "text",
-          text: {
-            content: charge.transfer_group || "",
-          },
-        },
-      ],
-    },
-    "On Behalf Of": {
-      rich_text: [
-        {
-          type: "text",
-          text: {
-            content: charge.on_behalf_of || "",
-          },
-        },
-      ],
-    },
-    "Source Transfer": {
-      rich_text: [
-        {
-          type: "text",
-          text: {
-            content: charge.source_transfer || "",
-          },
-        },
-      ],
-    },
-    Review: {
-      rich_text: [
-        {
-          type: "text",
-          text: {
-            content: charge.review || "",
-          },
-        },
-      ],
-    },
-    "Refund Count": {
-      number: charge.refunds?.data?.length || 0,
-    },
-    Metadata: {
-      rich_text: [
-        {
-          type: "text",
-          text: {
-            content: JSON.stringify(charge.metadata || {}),
-          },
-        },
-      ],
-    },
+    "Charge ID": createTitleProperty(charge.id),
+    Amount: createNumberProperty(charge.amount),
+    "Amount Captured": createNumberProperty(charge.amount_captured),
+    "Amount Refunded": createNumberProperty(charge.amount_refunded),
+    Currency: createRichTextProperty(charge.currency?.toUpperCase() || ""),
+    Status: createSelectProperty(charge.status ? charge.status : null),
+    Paid: createCheckboxProperty(charge.paid || false),
+    Captured: createCheckboxProperty(charge.captured || false),
+    Refunded: createCheckboxProperty(charge.refunded || false),
+    Disputed: createCheckboxProperty(charge.disputed || false),
+    "Live Mode": createCheckboxProperty(charge.livemode || false),
+    "Created Date": createDateProperty(charge.created),
+    Description: createRichTextProperty(charge.description || ""),
+    "Receipt Email": createEmailProperty(charge.receipt_email),
+    "Receipt URL": createUrlProperty(charge.receipt_url),
+    "Statement Descriptor": createRichTextProperty(charge.statement_descriptor),
+    "Balance Transaction": createRichTextProperty(
+      stringFromObject(charge.balance_transaction)
+    ),
+    Application: createRichTextProperty(stringFromObject(charge.application)),
+    "Application Fee Amount": createNumberProperty(
+      charge.application_fee_amount
+    ),
+    Transfer: createRichTextProperty(stringFromObject(charge.transfer)),
+    "Transfer Group": createRichTextProperty(charge.transfer_group),
+    "On Behalf Of": createRichTextProperty(
+      stringFromObject(charge.on_behalf_of)
+    ),
+    "Source Transfer": createRichTextProperty(
+      stringFromObject(charge.source_transfer)
+    ),
+    Review: createRichTextProperty(stringFromObject(charge.review)),
+    "Refund Count": createNumberProperty(charge.refunds?.data?.length),
+    Metadata: createRichTextProperty(JSON.stringify(charge.metadata || {})),
   };
 
   // Add customer relation if we have the Notion page ID
   if (customerNotionPageId) {
-    properties["Customer"] = {
-      relation: [{ id: customerNotionPageId }],
-    };
+    properties["Customer"] = createRelationProperty(customerNotionPageId);
   }
 
   // Add Payment Intent relation if we have the Notion page ID
   if (paymentIntentNotionPageId) {
-    properties["Payment Intent"] = {
-      relation: [{ id: paymentIntentNotionPageId }],
-    };
+    properties["Payment Intent"] = createRelationProperty(
+      paymentIntentNotionPageId
+    );
   }
 
   // Enhanced Payment Method with comprehensive details
@@ -264,321 +142,74 @@ export function stripeChargeToNotionProperties(
     }
   }
 
-  properties["Payment Method"] = {
-    rich_text: [
-      {
-        type: "text",
-        text: {
-          content: paymentMethodText,
-        },
-      },
-    ],
-  };
-
-  properties["Payment Method Type"] = {
-    select: paymentMethodType ? { name: paymentMethodType } : null,
-  };
-
-  properties["Card Brand"] = {
-    select: cardBrand ? { name: cardBrand } : null,
-  };
-
-  properties["Card Last4"] = {
-    rich_text: [
-      {
-        type: "text",
-        text: {
-          content: cardLast4,
-        },
-      },
-    ],
-  };
-
-  properties["Card Funding"] = {
-    select: cardFunding ? { name: cardFunding } : null,
-  };
-
-  properties["Card Country"] = {
-    rich_text: [
-      {
-        type: "text",
-        text: {
-          content: cardCountry,
-        },
-      },
-    ],
-  };
-
-  properties["Card Exp Month"] = {
-    number: cardExpMonth,
-  };
-
-  properties["Card Exp Year"] = {
-    number: cardExpYear,
-  };
+  properties["Payment Method"] = createRichTextProperty(paymentMethodText);
+  properties["Payment Method Type"] = createSelectProperty(paymentMethodType);
+  properties["Card Brand"] = createSelectProperty(cardBrand);
+  properties["Card Last4"] = createRichTextProperty(cardLast4);
+  properties["Card Funding"] = createSelectProperty(cardFunding);
+  properties["Card Country"] = createRichTextProperty(cardCountry);
+  properties["Card Exp Month"] = createNumberProperty(cardExpMonth);
+  properties["Card Exp Year"] = createNumberProperty(cardExpYear);
 
   // Billing details
   if (charge.billing_details) {
     const billing = charge.billing_details;
-    properties["Billing Name"] = {
-      rich_text: [
-        {
-          type: "text",
-          text: {
-            content: billing.name || "",
-          },
-        },
-      ],
-    };
-
-    properties["Billing Email"] = {
-      email: billing.email || null,
-    };
-
-    properties["Billing Phone"] = {
-      phone_number: billing.phone || null,
-    };
+    properties["Billing Name"] = createRichTextProperty(billing.name);
+    properties["Billing Email"] = createEmailProperty(billing.email);
+    properties["Billing Phone"] = createPhoneProperty(billing.phone);
 
     if (billing.address) {
-      properties["Billing Address Line 1"] = {
-        rich_text: [
-          {
-            type: "text",
-            text: {
-              content: billing.address.line1 || "",
-            },
-          },
-        ],
-      };
-
-      properties["Billing Address Line 2"] = {
-        rich_text: [
-          {
-            type: "text",
-            text: {
-              content: billing.address.line2 || "",
-            },
-          },
-        ],
-      };
-
-      properties["Billing City"] = {
-        rich_text: [
-          {
-            type: "text",
-            text: {
-              content: billing.address.city || "",
-            },
-          },
-        ],
-      };
-
-      properties["Billing State"] = {
-        rich_text: [
-          {
-            type: "text",
-            text: {
-              content: billing.address.state || "",
-            },
-          },
-        ],
-      };
-
-      properties["Billing Postal Code"] = {
-        rich_text: [
-          {
-            type: "text",
-            text: {
-              content: billing.address.postal_code || "",
-            },
-          },
-        ],
-      };
-
-      properties["Billing Country"] = {
-        rich_text: [
-          {
-            type: "text",
-            text: {
-              content: billing.address.country || "",
-            },
-          },
-        ],
-      };
+      properties["Billing Address Line 1"] = createRichTextProperty(
+        billing.address.line1
+      );
+      properties["Billing Address Line 2"] = createRichTextProperty(
+        billing.address.line2
+      );
+      properties["Billing City"] = createRichTextProperty(billing.address.city);
+      properties["Billing State"] = createRichTextProperty(
+        billing.address.state
+      );
+      properties["Billing Postal Code"] = createRichTextProperty(
+        billing.address.postal_code
+      );
+      properties["Billing Country"] = createRichTextProperty(
+        billing.address.country
+      );
     }
   }
 
   // Outcome details
   if (charge.outcome) {
-    properties["Outcome Type"] = {
-      select: charge.outcome.type ? { name: charge.outcome.type } : null,
-    };
-
-    properties["Outcome Reason"] = {
-      rich_text: [
-        {
-          type: "text",
-          text: {
-            content: charge.outcome.reason || "",
-          },
-        },
-      ],
-    };
-
-    properties["Risk Level"] = {
-      select: charge.outcome.risk_level
-        ? { name: charge.outcome.risk_level }
-        : null,
-    };
-
-    properties["Risk Score"] = {
-      number: charge.outcome.risk_score || null,
-    };
+    properties["Outcome Type"] = createSelectProperty(charge.outcome.type);
+    properties["Outcome Reason"] = createRichTextProperty(charge.outcome.reason);
+    properties["Risk Level"] = createSelectProperty(charge.outcome.risk_level);
+    properties["Risk Score"] = createNumberProperty(charge.outcome.risk_score);
   }
 
   // Fraud details
   if (charge.fraud_details) {
-    properties["Fraud Stripe Report"] = {
-      select: charge.fraud_details.stripe_report
-        ? { name: charge.fraud_details.stripe_report }
-        : null,
-    };
-
-    properties["Fraud User Report"] = {
-      select: charge.fraud_details.user_report
-        ? { name: charge.fraud_details.user_report }
-        : null,
-    };
+    properties["Fraud Stripe Report"] = createSelectProperty(charge.fraud_details.stripe_report);
+    properties["Fraud User Report"] = createSelectProperty(charge.fraud_details.user_report);
   }
 
   // Failure details
-  properties["Failure Code"] = {
-    rich_text: [
-      {
-        type: "text",
-        text: {
-          content: charge.failure_code || "",
-        },
-      },
-    ],
-  };
-
-  properties["Failure Message"] = {
-    rich_text: [
-      {
-        type: "text",
-        text: {
-          content: charge.failure_message || "",
-        },
-      },
-    ],
-  };
+  properties["Failure Code"] = createRichTextProperty(charge.failure_code);
+  properties["Failure Message"] = createRichTextProperty(charge.failure_message);
 
   // Shipping details
   if (charge.shipping) {
-    properties["Shipping Name"] = {
-      rich_text: [
-        {
-          type: "text",
-          text: {
-            content: charge.shipping.name || "",
-          },
-        },
-      ],
-    };
-
-    properties["Shipping Phone"] = {
-      phone_number: charge.shipping.phone || null,
-    };
-
-    properties["Shipping Carrier"] = {
-      rich_text: [
-        {
-          type: "text",
-          text: {
-            content: charge.shipping.carrier || "",
-          },
-        },
-      ],
-    };
-
-    properties["Tracking Number"] = {
-      rich_text: [
-        {
-          type: "text",
-          text: {
-            content: charge.shipping.tracking_number || "",
-          },
-        },
-      ],
-    };
+    properties["Shipping Name"] = createRichTextProperty(charge.shipping.name);
+    properties["Shipping Phone"] = createPhoneProperty(charge.shipping.phone);
+    properties["Shipping Carrier"] = createRichTextProperty(charge.shipping.carrier);
+    properties["Tracking Number"] = createRichTextProperty(charge.shipping.tracking_number);
 
     if (charge.shipping.address) {
-      properties["Shipping Address Line 1"] = {
-        rich_text: [
-          {
-            type: "text",
-            text: {
-              content: charge.shipping.address.line1 || "",
-            },
-          },
-        ],
-      };
-
-      properties["Shipping Address Line 2"] = {
-        rich_text: [
-          {
-            type: "text",
-            text: {
-              content: charge.shipping.address.line2 || "",
-            },
-          },
-        ],
-      };
-
-      properties["Shipping City"] = {
-        rich_text: [
-          {
-            type: "text",
-            text: {
-              content: charge.shipping.address.city || "",
-            },
-          },
-        ],
-      };
-
-      properties["Shipping State"] = {
-        rich_text: [
-          {
-            type: "text",
-            text: {
-              content: charge.shipping.address.state || "",
-            },
-          },
-        ],
-      };
-
-      properties["Shipping Postal Code"] = {
-        rich_text: [
-          {
-            type: "text",
-            text: {
-              content: charge.shipping.address.postal_code || "",
-            },
-          },
-        ],
-      };
-
-      properties["Shipping Country"] = {
-        rich_text: [
-          {
-            type: "text",
-            text: {
-              content: charge.shipping.address.country || "",
-            },
-          },
-        ],
-      };
+      properties["Shipping Address Line 1"] = createRichTextProperty(charge.shipping.address.line1);
+      properties["Shipping Address Line 2"] = createRichTextProperty(charge.shipping.address.line2);
+      properties["Shipping City"] = createRichTextProperty(charge.shipping.address.city);
+      properties["Shipping State"] = createRichTextProperty(charge.shipping.address.state);
+      properties["Shipping Postal Code"] = createRichTextProperty(charge.shipping.address.postal_code);
+      properties["Shipping Country"] = createRichTextProperty(charge.shipping.address.country);
     }
   }
 

@@ -1,6 +1,5 @@
-import { stripeProductToNotionProperties } from "@/converters/product";
-import { upsertPageByTitle } from "@/utils/notion-api";
 import { handleNotionError } from "../shared/utils";
+import { coordinatedUpsertProduct } from "@/utils/coordinated-upsert";
 import type { HandlerContext, HandlerResult } from "../shared/types";
 import type Stripe from "stripe";
 
@@ -17,22 +16,11 @@ export async function handleProductEvent(
   }
 
   try {
-    const properties = stripeProductToNotionProperties(product);
-    
-    if (!properties) {
-      throw new Error("Failed to convert product to Notion properties");
-    }
-
-    await upsertPageByTitle(
-      context.notionToken,
-      productDatabaseId,
-      "Product ID",
+    await coordinatedUpsertProduct(
+      context,
       product.id,
-      properties
+      productDatabaseId
     );
-
-    // Clear any previous errors for this database since we succeeded
-    await context.account.setEntityError('product', null);
     return { success: true };
   } catch (error) {
     await handleNotionError(error, context, 'product');

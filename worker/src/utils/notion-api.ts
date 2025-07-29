@@ -282,8 +282,7 @@ export async function upsertPageByTitle(
   databaseId: string,
   titleProperty: string,
   titleValue: string,
-  properties: Record<string, any>,
-  mergeMode: 'replace' | 'merge' = 'merge'
+  properties: Record<string, any>
 ): Promise<CreatePageResponse | UpdatePageResponse> {
   console.log(
     `[UpsertPage] Starting upsert for title: "${titleValue}" in database: ${databaseId}`
@@ -291,7 +290,7 @@ export async function upsertPageByTitle(
   console.log(`[UpsertPage] Title property: ${titleProperty}`);
 
   // First, query the database to see if a page with this title already exists
-  console.log(`[UpsertPage] Querying database for existing page...`);
+  console.log(`[UpsertPage] Querying database for existing page for ${titleProperty}: ${titleValue} ...`);
   const queryResult = await queryDatabase(authToken, {
     database_id: databaseId,
     filter: {
@@ -306,22 +305,14 @@ export async function upsertPageByTitle(
     `[UpsertPage] Query returned ${queryResult.results.length} results`
   );
 
+  
   if (queryResult.results.length > 0) {
     // Update existing page
     const existingPage = queryResult.results[0] as PageObjectResponse;
-    
-    let finalProperties = properties;
-    if (mergeMode === 'merge') {
-      // Only update properties that are provided (non-null/undefined)
-      finalProperties = Object.fromEntries(
-        Object.entries(properties).filter(([_, value]) => value != null)
-      );
-      console.log(`[UpsertPage] Merge mode: filtering ${Object.keys(properties).length - Object.keys(finalProperties).length} null/undefined properties`);
-    }
-    
-    console.log(`[UpsertPage] Updating existing page: ${existingPage.id} with ${Object.keys(finalProperties).length} properties`);
+
+    console.log(`[UpsertPage] Updating existing page: ${existingPage.id} with ${Object.keys(properties).length} properties`);
     return updatePage(authToken, existingPage.id, {
-      properties: finalProperties,
+      properties,
     });
   } else {
     // Create new page

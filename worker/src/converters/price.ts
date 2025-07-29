@@ -1,218 +1,95 @@
 import type Stripe from "stripe";
+import {
+  createTitleProperty,
+  createRichTextProperty,
+  createCheckboxProperty,
+  createNumberProperty,
+  createSelectProperty,
+  createDateProperty,
+  createRelationProperty,
+} from "@/utils/notion-properties";
 
 export function stripePriceToNotionProperties(price: Stripe.Price, productNotionPageId: string | null) {
   const properties: Record<string, any> = {
-    "Price ID": {
-      title: [
-        {
-          type: "text",
-          text: {
-            content: price.id,
-          },
-        },
-      ],
-    },
-    "Active": {
-      checkbox: price.active || false,
-    },
-    "Type": {
-      select: price.type ? { name: price.type } : null,
-    },
-    "Billing Scheme": {
-      select: price.billing_scheme ? { name: price.billing_scheme } : null,
-    },
-    "Currency": {
-      rich_text: [
-        {
-          type: "text",
-          text: {
-            content: price.currency?.toUpperCase() || "",
-          },
-        },
-      ],
-    },
-    "Unit Amount": {
-      number: price.unit_amount || null,
-    },
-    "Unit Amount Decimal": {
-      rich_text: [
-        {
-          type: "text",
-          text: {
-            content: price.unit_amount_decimal || "",
-          },
-        },
-      ],
-    },
-    "Nickname": {
-      rich_text: [
-        {
-          type: "text",
-          text: {
-            content: price.nickname || "",
-          },
-        },
-      ],
-    },
-    "Lookup Key": {
-      rich_text: [
-        {
-          type: "text",
-          text: {
-            content: price.lookup_key || "",
-          },
-        },
-      ],
-    },
-    "Tax Behavior": {
-      select: price.tax_behavior ? { name: price.tax_behavior } : null,
-    },
-    "Live Mode": {
-      checkbox: price.livemode || false,
-    },
-    "Created Date": {
-      date: {
-        start: new Date(price.created * 1000).toISOString().split('T')[0],
-      },
-    },
-    "Metadata": {
-      rich_text: [
-        {
-          type: "text",
-          text: {
-            content: JSON.stringify(price.metadata || {}),
-          },
-        },
-      ],
-    },
+    "Price ID": createTitleProperty(price.id),
+    "Active": createCheckboxProperty(price.active),
+    "Type": createSelectProperty(price.type),
+    "Billing Scheme": createSelectProperty(price.billing_scheme),
+    "Currency": createRichTextProperty(price.currency?.toUpperCase()),
+    "Unit Amount": createNumberProperty(price.unit_amount),
+    "Unit Amount Decimal": createRichTextProperty(price.unit_amount_decimal),
+    "Nickname": createRichTextProperty(price.nickname),
+    "Lookup Key": createRichTextProperty(price.lookup_key),
+    "Tax Behavior": createSelectProperty(price.tax_behavior),
+    "Live Mode": createCheckboxProperty(price.livemode),
+    "Created Date": createDateProperty(price.created),
+    "Metadata": createRichTextProperty(JSON.stringify(price.metadata || {})),
   };
 
   // Add product relation if we have the Notion page ID
   if (productNotionPageId) {
-    properties["Product"] = {
-      relation: [{ id: productNotionPageId }],
-    };
+    properties["Product"] = createRelationProperty(productNotionPageId);
   }
 
   // Handle recurring details
   if (price.recurring) {
-    properties["Recurring Interval"] = {
-      select: price.recurring.interval ? { name: price.recurring.interval } : null,
-    };
+    properties["Recurring Interval"] = createSelectProperty(price.recurring.interval);
 
-    properties["Recurring Interval Count"] = {
-      number: price.recurring.interval_count || 1,
-    };
+    properties["Recurring Interval Count"] = createNumberProperty(price.recurring.interval_count || 1);
 
-    properties["Recurring Usage Type"] = {
-      select: price.recurring.usage_type ? { name: price.recurring.usage_type } : null,
-    };
+    properties["Recurring Usage Type"] = createSelectProperty(price.recurring.usage_type);
 
-    properties["Recurring Meter"] = {
-      rich_text: [
-        {
-          type: "text",
-          text: {
-            content: price.recurring.meter || "",
-          },
-        },
-      ],
-    };
+    properties["Recurring Meter"] = createRichTextProperty(price.recurring.meter);
   } else {
-    properties["Recurring Interval"] = {
-      select: null,
-    };
+    properties["Recurring Interval"] = createSelectProperty(null);
 
-    properties["Recurring Interval Count"] = {
-      number: null,
-    };
+    properties["Recurring Interval Count"] = createNumberProperty(null);
 
-    properties["Recurring Usage Type"] = {
-      select: null,
-    };
+    properties["Recurring Usage Type"] = createSelectProperty(null);
 
-    properties["Recurring Meter"] = {
-      rich_text: [
-        {
-          type: "text",
-          text: {
-            content: "",
-          },
-        },
-      ],
-    };
+    properties["Recurring Meter"] = createRichTextProperty("");
   }
 
   // Handle custom unit amount
   if (price.custom_unit_amount) {
-    properties["Custom Unit Amount Minimum"] = {
-      number: price.custom_unit_amount.minimum || null,
-    };
+    properties["Custom Unit Amount Minimum"] = createNumberProperty(price.custom_unit_amount.minimum);
 
-    properties["Custom Unit Amount Maximum"] = {
-      number: price.custom_unit_amount.maximum || null,
-    };
+    properties["Custom Unit Amount Maximum"] = createNumberProperty(price.custom_unit_amount.maximum);
 
-    properties["Custom Unit Amount Preset"] = {
-      number: price.custom_unit_amount.preset || null,
-    };
+    properties["Custom Unit Amount Preset"] = createNumberProperty(price.custom_unit_amount.preset);
   } else {
-    properties["Custom Unit Amount Minimum"] = {
-      number: null,
-    };
+    properties["Custom Unit Amount Minimum"] = createNumberProperty(null);
 
-    properties["Custom Unit Amount Maximum"] = {
-      number: null,
-    };
+    properties["Custom Unit Amount Maximum"] = createNumberProperty(null);
 
-    properties["Custom Unit Amount Preset"] = {
-      number: null,
-    };
+    properties["Custom Unit Amount Preset"] = createNumberProperty(null);
   }
 
   // Handle tiers
   if (price.tiers && price.tiers.length > 0) {
-    properties["Tiers Count"] = {
-      number: price.tiers.length,
-    };
+    properties["Tiers Count"] = createNumberProperty(price.tiers.length);
 
-    properties["Tiers Mode"] = {
-      select: price.tiers_mode ? { name: price.tiers_mode } : null,
-    };
+    properties["Tiers Mode"] = createSelectProperty(price.tiers_mode);
   } else {
-    properties["Tiers Count"] = {
-      number: 0,
-    };
+    properties["Tiers Count"] = createNumberProperty(0);
 
-    properties["Tiers Mode"] = {
-      select: null,
-    };
+    properties["Tiers Mode"] = createSelectProperty(null);
   }
 
   // Handle transform quantity
   if (price.transform_quantity) {
-    properties["Transform Quantity Divide By"] = {
-      number: price.transform_quantity.divide_by || null,
-    };
+    properties["Transform Quantity Divide By"] = createNumberProperty(price.transform_quantity.divide_by);
 
-    properties["Transform Quantity Round"] = {
-      select: price.transform_quantity.round ? { name: price.transform_quantity.round } : null,
-    };
+    properties["Transform Quantity Round"] = createSelectProperty(price.transform_quantity.round);
   } else {
-    properties["Transform Quantity Divide By"] = {
-      number: null,
-    };
+    properties["Transform Quantity Divide By"] = createNumberProperty(null);
 
-    properties["Transform Quantity Round"] = {
-      select: null,
-    };
+    properties["Transform Quantity Round"] = createSelectProperty(null);
   }
 
   // Handle currency options
   if (price.currency_options && Object.keys(price.currency_options).length > 0) {
-    properties["Currency Options Count"] = {
-      number: Object.keys(price.currency_options).length,
-    };
+    properties["Currency Options Count"] = createNumberProperty(Object.keys(price.currency_options).length);
 
     // Create a summary of currency options
     const currencyOptionsSummary = Object.entries(price.currency_options)
@@ -230,31 +107,11 @@ export function stripePriceToNotionProperties(price: Stripe.Price, productNotion
       })
       .join(", ");
 
-    properties["Currency Options"] = {
-      rich_text: [
-        {
-          type: "text",
-          text: {
-            content: currencyOptionsSummary,
-          },
-        },
-      ],
-    };
+    properties["Currency Options"] = createRichTextProperty(currencyOptionsSummary);
   } else {
-    properties["Currency Options Count"] = {
-      number: 0,
-    };
+    properties["Currency Options Count"] = createNumberProperty(0);
 
-    properties["Currency Options"] = {
-      rich_text: [
-        {
-          type: "text",
-          text: {
-            content: "",
-          },
-        },
-      ],
-    };
+    properties["Currency Options"] = createRichTextProperty("");
   }
 
   return properties;

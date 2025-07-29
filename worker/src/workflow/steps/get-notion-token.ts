@@ -18,7 +18,7 @@ export async function getNotionToken(
         stripeAccount: stripeAccountId,
       }
     );
-    return notionSecret.payload;
+    return notionSecret.payload || null;
   } catch (e) {
     return null;
   }

@@ -1,4 +1,13 @@
 import type Stripe from "stripe";
+import {
+  createTitleProperty,
+  createRichTextProperty,
+  createCheckboxProperty,
+  createNumberProperty,
+  createDateProperty,
+  createRelationProperty,
+  stringFromObject,
+} from "@/utils/notion-properties";
 
 export function stripeInvoiceItemToNotionProperties(
   invoiceItem: Stripe.InvoiceItem, 
@@ -7,149 +16,43 @@ export function stripeInvoiceItemToNotionProperties(
   priceNotionPageId: string | null
 ) {
   const properties: Record<string, any> = {
-    "Invoice Item ID": {
-      title: [
-        {
-          type: "text",
-          text: {
-            content: invoiceItem.id,
-          },
-        },
-      ],
-    },
-    "Amount": {
-      number: invoiceItem.amount || 0,
-    },
-    "Currency": {
-      rich_text: [
-        {
-          type: "text",
-          text: {
-            content: invoiceItem.currency?.toUpperCase() || "",
-          },
-        },
-      ],
-    },
-    "Description": {
-      rich_text: [
-        {
-          type: "text",
-          text: {
-            content: invoiceItem.description || "",
-          },
-        },
-      ],
-    },
-    "Discountable": {
-      checkbox: invoiceItem.discountable || false,
-    },
-    "Period Start": {
-      date: invoiceItem.period?.start ? {
-        start: new Date(invoiceItem.period.start * 1000).toISOString().split('T')[0],
-      } : null,
-    },
-    "Period End": {
-      date: invoiceItem.period?.end ? {
-        start: new Date(invoiceItem.period.end * 1000).toISOString().split('T')[0],
-      } : null,
-    },
-    "Proration": {
-      checkbox: invoiceItem.proration || false,
-    },
-    "Quantity": {
-      number: invoiceItem.quantity || null,
-    },
-    "Subscription": {
-      rich_text: [
-        {
-          type: "text",
-          text: {
-            content: "",
-          },
-        },
-      ],
-    },
-    "Subscription Item": {
-      rich_text: [
-        {
-          type: "text",
-          text: {
-            content: "",
-          },
-        },
-      ],
-    },
-    "Test Clock": {
-      rich_text: [
-        {
-          type: "text",
-          text: {
-            content: typeof invoiceItem.test_clock === "string" 
-              ? invoiceItem.test_clock 
-              : invoiceItem.test_clock?.id || "",
-          },
-        },
-      ],
-    },
-    "Unit Amount": {
-      number: null,
-    },
-    "Unit Amount Decimal": {
-      rich_text: [
-        {
-          type: "text",
-          text: {
-            content: "",
-          },
-        },
-      ],
-    },
-    "Live Mode": {
-      checkbox: invoiceItem.livemode || false,
-    },
-    "Created Date": {
-      date: {
-        start: new Date(invoiceItem.date * 1000).toISOString().split('T')[0],
-      },
-    },
-    "Metadata": {
-      rich_text: [
-        {
-          type: "text",
-          text: {
-            content: JSON.stringify(invoiceItem.metadata || {}),
-          },
-        },
-      ],
-    },
+    "Invoice Item ID": createTitleProperty(invoiceItem.id),
+    "Amount": createNumberProperty(invoiceItem.amount || 0),
+    "Currency": createRichTextProperty(invoiceItem.currency?.toUpperCase()),
+    "Description": createRichTextProperty(invoiceItem.description),
+    "Discountable": createCheckboxProperty(invoiceItem.discountable),
+    "Period Start": createDateProperty(invoiceItem.period?.start),
+    "Period End": createDateProperty(invoiceItem.period?.end),
+    "Proration": createCheckboxProperty(invoiceItem.proration),
+    "Quantity": createNumberProperty(invoiceItem.quantity),
+    "Subscription": createRichTextProperty(""),
+    "Subscription Item": createRichTextProperty(""),
+    "Test Clock": createRichTextProperty(stringFromObject(invoiceItem.test_clock)),
+    "Unit Amount": createNumberProperty(null),
+    "Unit Amount Decimal": createRichTextProperty(""),
+    "Live Mode": createCheckboxProperty(invoiceItem.livemode),
+    "Created Date": createDateProperty(invoiceItem.date),
+    "Metadata": createRichTextProperty(JSON.stringify(invoiceItem.metadata || {})),
   };
 
   // Add customer relation if we have the Notion page ID
   if (customerNotionPageId) {
-    properties["Customer"] = {
-      relation: [{ id: customerNotionPageId }],
-    };
+    properties["Customer"] = createRelationProperty(customerNotionPageId);
   }
 
   // Add invoice relation if we have the Notion page ID
   if (invoiceNotionPageId) {
-    properties["Invoice"] = {
-      relation: [{ id: invoiceNotionPageId }],
-    };
+    properties["Invoice"] = createRelationProperty(invoiceNotionPageId);
   }
 
   // Add price relation if we have the Notion page ID
   if (priceNotionPageId) {
-    properties["Price"] = {
-      relation: [{ id: priceNotionPageId }],
-    };
+    properties["Price"] = createRelationProperty(priceNotionPageId);
   }
 
   // Handle tax rates
   if (invoiceItem.tax_rates && invoiceItem.tax_rates.length > 0) {
-    properties["Tax Rates Count"] = {
-      number: invoiceItem.tax_rates.length,
-    };
+    properties["Tax Rates Count"] = createNumberProperty(invoiceItem.tax_rates.length);
 
     const taxRatesText = invoiceItem.tax_rates
       .map(rate => {
@@ -161,38 +64,16 @@ export function stripeInvoiceItemToNotionProperties(
       })
       .join(", ");
 
-    properties["Tax Rates"] = {
-      rich_text: [
-        {
-          type: "text",
-          text: {
-            content: taxRatesText,
-          },
-        },
-      ],
-    };
+    properties["Tax Rates"] = createRichTextProperty(taxRatesText);
   } else {
-    properties["Tax Rates Count"] = {
-      number: 0,
-    };
+    properties["Tax Rates Count"] = createNumberProperty(0);
 
-    properties["Tax Rates"] = {
-      rich_text: [
-        {
-          type: "text",
-          text: {
-            content: "",
-          },
-        },
-      ],
-    };
+    properties["Tax Rates"] = createRichTextProperty("");
   }
 
   // Handle discounts
   if (invoiceItem.discounts && invoiceItem.discounts.length > 0) {
-    properties["Discounts Count"] = {
-      number: invoiceItem.discounts.length,
-    };
+    properties["Discounts Count"] = createNumberProperty(invoiceItem.discounts.length);
 
     const discountsText = invoiceItem.discounts
       .map(discount => {
@@ -207,31 +88,11 @@ export function stripeInvoiceItemToNotionProperties(
       })
       .join(", ");
 
-    properties["Discounts"] = {
-      rich_text: [
-        {
-          type: "text",
-          text: {
-            content: discountsText,
-          },
-        },
-      ],
-    };
+    properties["Discounts"] = createRichTextProperty(discountsText);
   } else {
-    properties["Discounts Count"] = {
-      number: 0,
-    };
+    properties["Discounts Count"] = createNumberProperty(0);
 
-    properties["Discounts"] = {
-      rich_text: [
-        {
-          type: "text",
-          text: {
-            content: "",
-          },
-        },
-      ],
-    };
+    properties["Discounts"] = createRichTextProperty("");
   }
 
   return properties;

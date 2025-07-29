@@ -1,103 +1,39 @@
 import type Stripe from "stripe";
+import {
+  createTitleProperty,
+  createRichTextProperty,
+  createCheckboxProperty,
+  createEmailProperty,
+  createNumberProperty,
+  createSelectProperty,
+  createDateProperty,
+  createRelationProperty,
+  stringFromObject,
+} from "@/utils/notion-properties";
 
 export function stripePaymentIntentToNotionProperties(
   paymentIntent: Stripe.PaymentIntent,
   customerNotionPageId: string | null
 ) {
   const properties: Record<string, any> = {
-    "Payment Intent ID": {
-      title: [
-        {
-          type: "text",
-          text: {
-            content: paymentIntent.id,
-          },
-        },
-      ],
-    },
-    Amount: {
-      number: paymentIntent.amount || 0,
-    },
-    "Amount Capturable": {
-      number: paymentIntent.amount_capturable || 0,
-    },
-    "Amount Received": {
-      number: paymentIntent.amount_received || 0,
-    },
-    Currency: {
-      rich_text: [
-        {
-          type: "text",
-          text: {
-            content: paymentIntent.currency?.toUpperCase() || "",
-          },
-        },
-      ],
-    },
-    Status: {
-      select: paymentIntent.status ? { name: paymentIntent.status } : null,
-    },
-    "Capture Method": {
-      select: paymentIntent.capture_method ? { name: paymentIntent.capture_method } : null,
-    },
-    "Confirmation Method": {
-      select: paymentIntent.confirmation_method ? { name: paymentIntent.confirmation_method } : null,
-    },
-    "Created Date": {
-      date: {
-        start: new Date(paymentIntent.created * 1000).toISOString().split('T')[0],
-      },
-    },
-    "Canceled At": {
-      date: paymentIntent.canceled_at ? {
-        start: new Date(paymentIntent.canceled_at * 1000).toISOString().split('T')[0],
-      } : null,
-    },
-    "Cancellation Reason": {
-      select: paymentIntent.cancellation_reason ? { name: paymentIntent.cancellation_reason } : null,
-    },
-    Description: {
-      rich_text: [
-        {
-          type: "text",
-          text: {
-            content: paymentIntent.description || "",
-          },
-        },
-      ],
-    },
-    "Application Fee Amount": {
-      number: paymentIntent.application_fee_amount || null,
-    },
-    "Live Mode": {
-      checkbox: paymentIntent.livemode || false,
-    },
-    "Payment Method": {
-      rich_text: [
-        {
-          type: "text",
-          text: {
-            content: paymentIntent.payment_method || "",
-          },
-        },
-      ],
-    },
-    "Setup Future Usage": {
-      select: paymentIntent.setup_future_usage ? { name: paymentIntent.setup_future_usage } : null,
-    },
-    "Receipt Email": {
-      email: paymentIntent.receipt_email || null,
-    },
-    "Statement Descriptor": {
-      rich_text: [
-        {
-          type: "text",
-          text: {
-            content: paymentIntent.statement_descriptor || "",
-          },
-        },
-      ],
-    },
+    "Payment Intent ID": createTitleProperty(paymentIntent.id),
+    Amount: createNumberProperty(paymentIntent.amount || 0),
+    "Amount Capturable": createNumberProperty(paymentIntent.amount_capturable || 0),
+    "Amount Received": createNumberProperty(paymentIntent.amount_received || 0),
+    Currency: createRichTextProperty(paymentIntent.currency?.toUpperCase()),
+    Status: createSelectProperty(paymentIntent.status),
+    "Capture Method": createSelectProperty(paymentIntent.capture_method),
+    "Confirmation Method": createSelectProperty(paymentIntent.confirmation_method),
+    "Created Date": createDateProperty(paymentIntent.created),
+    "Canceled At": createDateProperty(paymentIntent.canceled_at),
+    "Cancellation Reason": createSelectProperty(paymentIntent.cancellation_reason),
+    Description: createRichTextProperty(paymentIntent.description),
+    "Application Fee Amount": createNumberProperty(paymentIntent.application_fee_amount),
+    "Live Mode": createCheckboxProperty(paymentIntent.livemode),
+    "Payment Method": createRichTextProperty(stringFromObject(paymentIntent.payment_method)),
+    "Setup Future Usage": createSelectProperty(paymentIntent.setup_future_usage),
+    "Receipt Email": createEmailProperty(paymentIntent.receipt_email),
+    "Statement Descriptor": createRichTextProperty(paymentIntent.statement_descriptor),
     "Statement Descriptor Suffix": {
       rich_text: [
         {

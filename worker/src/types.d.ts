@@ -26,13 +26,6 @@ export type Env = {
 
 export type AppContext = HonoContext<Env>;
 
-export type BackfillWorkflowStatus = {
-  startedAt: number;
-  status: "started" | "complete";
-  recordsProcessed: number;
-  finishedAt?: number;
-};
-
 export type SupportedEntities = [
   "customer",
   "invoice",
@@ -48,6 +41,14 @@ export type SupportedEntities = [
   "payment_intent"
 ];
 export type SupportedEntity = SupportedEntities[number];
+
+export type BackfillWorkflowStatus = {
+  startedAt: number;
+  status: "started" | "complete";
+  recordsProcessed: number;
+  finishedAt?: number;
+  currentEntity?: SupportedEntity;
+};
 
 export type BackfillTaskStatus = {
   started: boolean;

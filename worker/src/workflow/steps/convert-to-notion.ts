@@ -9,9 +9,10 @@ import { stripePaymentIntentToNotionProperties } from "@/converters/payment-inte
 import { stripePriceToNotionProperties } from "@/converters/price";
 import { stripeProductToNotionProperties } from "@/converters/product";
 import { stripePromotionCodeToNotionProperties } from "@/converters/promotion-code";
-import { findPageByTitle } from "@/utils/notion-api";
 import type { SupportedEntity } from "@/types";
 import type { StripeEntities, DatabaseIds } from "../types";
+import type { StripeEntityCoordinator, RelatedEntityIds } from "@/stripe-entity-coordinator";
+import { upsertPageByTitle } from "@/utils/notion-api";
 import { Stripe } from "stripe";
 
 // Type guards
@@ -38,86 +39,76 @@ const isProduct = (entity: StripeEntities, entityType: SupportedEntity): entity 
 const isPromotionCode = (entity: StripeEntities, entityType: SupportedEntity): entity is Stripe.PromotionCode =>
   entityType === "promotion_code";
 
-// Helper function to resolve related entity page IDs
+// Helper function to resolve related entity page IDs with creation of missing Notion pages
 async function resolveRelatedPageIds(
   notionToken: string,
   databaseIds: DatabaseIds,
-  entity: StripeEntities
-): Promise<{
-  customerPageId: string | null;
-  invoicePageId: string | null;
-  chargePageId: string | null;
-  paymentIntentPageId: string | null;
-  productPageId: string | null;
-  pricePageId: string | null;
-}> {
-  const results = {
-    customerPageId: null as string | null,
-    invoicePageId: null as string | null,
-    chargePageId: null as string | null,
-    paymentIntentPageId: null as string | null,
-    productPageId: null as string | null,
-    pricePageId: null as string | null,
-  };
+  entity: StripeEntities,
+  stripeAccountId: string,
+  coordinatorNamespace: DurableObjectNamespace<StripeEntityCoordinator>,
+  stripe: Stripe
+): Promise<RelatedEntityIds> {
+  // Get coordinator instance
+  const doId = coordinatorNamespace.idFromName(stripeAccountId);
+  const coordinator = coordinatorNamespace.get(doId);
 
-  // Resolve customer if present and database exists
-  if ('customer' in entity && entity.customer && databaseIds.customerDatabaseId) {
+  // Start with basic resolution (read-only)
+  const results = await coordinator.resolveRelatedEntityIds(notionToken, databaseIds, entity);
+
+  // For any missing relationships, create the Notion pages using coordinator directly
+  if (!results.customerPageId && 'customer' in entity && entity.customer && databaseIds.customerDatabaseId) {
     const customerId = typeof entity.customer === 'string' ? entity.customer : entity.customer.id;
-    const customerPage = await findPageByTitle(
-      notionToken,
-      databaseIds.customerDatabaseId,
-      "Customer ID",
-      customerId
-    );
-    results.customerPageId = customerPage?.id || null;
+    if (customerId) {
+      try {
+        const mapping = await coordinator.coordinatedUpsert({
+          entityType: 'customer',
+          stripeId: customerId,
+          notionToken,
+          databaseId: databaseIds.customerDatabaseId,
+          titleProperty: 'Customer ID',
+          forceUpdate: false, // Use cache-first for related entities
+          upsertOperation: async () => {
+            const customer = await stripe.customers.retrieve(customerId, {
+              expand: ['subscriptions', 'sources', 'invoice_settings.default_payment_method', 'default_source']
+            }, { stripeAccount: stripeAccountId });
+            
+            if (customer.deleted) {
+              throw new Error(`Customer ${customerId} is deleted`);
+            }
+            
+            const properties = stripeCustomerToNotionProperties(customer as import("stripe").Stripe.Customer);
+            return await upsertPageByTitle(notionToken, databaseIds.customerDatabaseId!, "Customer ID", customer.id, properties);
+          }
+        });
+        results.customerPageId = mapping.notionPageId;
+      } catch (error) {
+        console.warn(`Failed to create customer Notion page for ${customerId}:`, error);
+      }
+    }
   }
 
-  // Resolve invoice if present and database exists
-  if ('invoice' in entity && entity.invoice && databaseIds.invoiceDatabaseId) {
-    const invoiceId = typeof entity.invoice === 'string' ? entity.invoice : entity.invoice.id;
-    const invoicePage = await findPageByTitle(
-      notionToken,
-      databaseIds.invoiceDatabaseId,
-      "Invoice ID",
-      invoiceId as string
-    );
-    results.invoicePageId = invoicePage?.id || null;
-  }
-
-  // Resolve charge if present and database exists
-  if ('charge' in entity && entity.charge && databaseIds.chargeDatabaseId) {
-    const chargeId = typeof entity.charge === 'string' ? entity.charge : entity.charge.id;
-    const chargePage = await findPageByTitle(
-      notionToken,
-      databaseIds.chargeDatabaseId,
-      "Charge ID",
-      chargeId
-    );
-    results.chargePageId = chargePage?.id || null;
-  }
-
-  // Resolve payment intent if present and database exists
-  if ('payment_intent' in entity && entity.payment_intent && databaseIds.paymentIntentDatabaseId) {
-    const paymentIntentId = typeof entity.payment_intent === 'string' ? entity.payment_intent : entity.payment_intent.id;
-    const paymentIntentPage = await findPageByTitle(
-      notionToken,
-      databaseIds.paymentIntentDatabaseId,
-      "Payment Intent ID",
-      paymentIntentId
-    );
-    results.paymentIntentPageId = paymentIntentPage?.id || null;
-  }
-
-  // Resolve product if present and database exists
-  if ('product' in entity && entity.product && databaseIds.productDatabaseId) {
+  if (!results.productPageId && 'product' in entity && entity.product && databaseIds.productDatabaseId) {
     const productId = typeof entity.product === 'string' ? entity.product : entity.product.id;
-    const productPage = await findPageByTitle(
-      notionToken,
-      databaseIds.productDatabaseId,
-      "Product ID",
-      productId
-    );
-    results.productPageId = productPage?.id || null;
+    if (productId) {
+      try {
+        const mapping = await coordinator.coordinatedUpsert({
+          entityType: 'product',
+          stripeId: productId,
+          notionToken,
+          databaseId: databaseIds.productDatabaseId,
+          titleProperty: 'Product ID',
+          forceUpdate: false, // Use cache-first for related entities
+          upsertOperation: async () => {
+            const product = await stripe.products.retrieve(productId, {}, { stripeAccount: stripeAccountId });
+            const properties = stripeProductToNotionProperties(product);
+            return await upsertPageByTitle(notionToken, databaseIds.productDatabaseId!, "Product ID", product.id, properties);
+          }
+        });
+        results.productPageId = mapping.notionPageId;
+      } catch (error) {
+        console.warn(`Failed to create product Notion page for ${productId}:`, error);
+      }
+    }
   }
 
   return results;
@@ -127,10 +118,20 @@ export async function convertToNotionProperties(
   entityToBackfill: SupportedEntity,
   firstItem: StripeEntities,
   notionToken: string,
-  databaseIds: DatabaseIds
+  databaseIds: DatabaseIds,
+  stripeAccountId: string,
+  coordinatorNamespace: DurableObjectNamespace<StripeEntityCoordinator>,
+  stripe: Stripe
 ): Promise<Record<string, any>> {
-  // Resolve related page IDs first
-  const relatedPageIds = await resolveRelatedPageIds(notionToken, databaseIds, firstItem);
+  // Resolve related page IDs first, creating missing Notion pages as needed
+  const relatedPageIds = await resolveRelatedPageIds(
+    notionToken, 
+    databaseIds, 
+    firstItem, 
+    stripeAccountId, 
+    coordinatorNamespace,
+    stripe
+  );
 
   switch (entityToBackfill) {
     case "customer":

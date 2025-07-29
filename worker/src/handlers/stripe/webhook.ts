@@ -24,7 +24,7 @@ export const stripeWebhookHandler = async (c: AppContext) => {
   }
 
   const objectType = event?.data.object.object;
-  console.log(`Processing ${objectType} event for account ${stripeAccountId}`);
+  console.log(`Processing ${event.type} / ${objectType} event for account ${stripeAccountId}`);
 
   // Get required resources in parallel
   const notionTokenPromise = getNotionToken(c, stripeAccountId);

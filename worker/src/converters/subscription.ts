@@ -1,4 +1,14 @@
 import type Stripe from "stripe";
+import {
+  createTitleProperty,
+  createRichTextProperty,
+  createCheckboxProperty,
+  createNumberProperty,
+  createSelectProperty,
+  createDateProperty,
+  createRelationProperty,
+  stringFromObject,
+} from "@/utils/notion-properties";
 
 export function stripeSubscriptionToNotionProperties(
   subscription: Stripe.Subscription, 
@@ -8,134 +18,40 @@ export function stripeSubscriptionToNotionProperties(
   primaryProductNotionPageId: string | null
 ) {
   const properties: Record<string, any> = {
-    "Subscription ID": {
-      title: [
-        {
-          type: "text",
-          text: {
-            content: subscription.id,
-          },
-        },
-      ],
-    },
-    "Status": {
-      select: subscription.status ? { name: subscription.status } : null,
-    },
-    "Collection Method": {
-      select: subscription.collection_method ? { name: subscription.collection_method } : null,
-    },
-    "Currency": {
-      rich_text: [
-        {
-          type: "text",
-          text: {
-            content: subscription.currency?.toUpperCase() || "",
-          },
-        },
-      ],
-    },
-    "Created Date": {
-      date: {
-        start: new Date(subscription.created * 1000).toISOString().split('T')[0],
-      },
-    },
-    "Start Date": {
-      date: subscription.start_date ? {
-        start: new Date(subscription.start_date * 1000).toISOString().split('T')[0],
-      } : null,
-    },
-    "Current Period Start": {
-      date: subscription.items?.data?.[0]?.current_period_start ? {
-        start: new Date(subscription.items.data[0].current_period_start * 1000).toISOString().split('T')[0],
-      } : null,
-    },
-    "Current Period End": {
-      date: subscription.items?.data?.[0]?.current_period_end ? {
-        start: new Date(subscription.items.data[0].current_period_end * 1000).toISOString().split('T')[0],
-      } : null,
-    },
-    "Trial Start": {
-      date: subscription.trial_start ? {
-        start: new Date(subscription.trial_start * 1000).toISOString().split('T')[0],
-      } : null,
-    },
-    "Trial End": {
-      date: subscription.trial_end ? {
-        start: new Date(subscription.trial_end * 1000).toISOString().split('T')[0],
-      } : null,
-    },
-    "Billing Cycle Anchor": {
-      date: subscription.billing_cycle_anchor ? {
-        start: new Date(subscription.billing_cycle_anchor * 1000).toISOString().split('T')[0],
-      } : null,
-    },
-    "Cancel At": {
-      date: subscription.cancel_at ? {
-        start: new Date(subscription.cancel_at * 1000).toISOString().split('T')[0],
-      } : null,
-    },
-    "Canceled At": {
-      date: subscription.canceled_at ? {
-        start: new Date(subscription.canceled_at * 1000).toISOString().split('T')[0],
-      } : null,
-    },
-    "Ended At": {
-      date: subscription.ended_at ? {
-        start: new Date(subscription.ended_at * 1000).toISOString().split('T')[0],
-      } : null,
-    },
-    "Cancel At Period End": {
-      checkbox: subscription.cancel_at_period_end || false,
-    },
-    "Live Mode": {
-      checkbox: subscription.livemode || false,
-    },
-    "Billing Mode": {
-      select: subscription.billing_thresholds ? { name: "flexible" } : { name: "classic" },
-    },
-    "Application Fee Percent": {
-      number: subscription.application_fee_percent || null,
-    },
-    "Days Until Due": {
-      number: subscription.days_until_due || null,
-    },
-    "Description": {
-      rich_text: [
-        {
-          type: "text",
-          text: {
-            content: subscription.description || "",
-          },
-        },
-      ],
-    },
-    "Automatic Tax Enabled": {
-      checkbox: !!subscription.automatic_tax?.enabled,
-    },
-    "Automatic Tax Disabled Reason": {
-      select: subscription.automatic_tax?.disabled_reason ? 
-        { name: subscription.automatic_tax.disabled_reason } : null,
-    },
-    "Billing Threshold Amount": {
-      number: subscription.billing_thresholds?.amount_gte || null,
-    },
-    "Reset Billing Cycle Anchor": {
-      checkbox: subscription.billing_thresholds?.reset_billing_cycle_anchor || false,
-    },
+    "Subscription ID": createTitleProperty(subscription.id),
+    "Status": createSelectProperty(subscription.status),
+    "Collection Method": createSelectProperty(subscription.collection_method),
+    "Currency": createRichTextProperty(subscription.currency?.toUpperCase()),
+    "Created Date": createDateProperty(subscription.created),
+    "Start Date": createDateProperty(subscription.start_date),
+    "Current Period Start": createDateProperty(subscription.items?.data?.[0]?.current_period_start),
+    "Current Period End": createDateProperty(subscription.items?.data?.[0]?.current_period_end),
+    "Trial Start": createDateProperty(subscription.trial_start),
+    "Trial End": createDateProperty(subscription.trial_end),
+    "Billing Cycle Anchor": createDateProperty(subscription.billing_cycle_anchor),
+    "Cancel At": createDateProperty(subscription.cancel_at),
+    "Canceled At": createDateProperty(subscription.canceled_at),
+    "Ended At": createDateProperty(subscription.ended_at),
+    "Cancel At Period End": createCheckboxProperty(subscription.cancel_at_period_end),
+    "Live Mode": createCheckboxProperty(subscription.livemode),
+    "Billing Mode": createSelectProperty(subscription.billing_thresholds ? "flexible" : "classic"),
+    "Application Fee Percent": createNumberProperty(subscription.application_fee_percent),
+    "Days Until Due": createNumberProperty(subscription.days_until_due),
+    "Description": createRichTextProperty(subscription.description),
+    "Automatic Tax Enabled": createCheckboxProperty(!!subscription.automatic_tax?.enabled),
+    "Automatic Tax Disabled Reason": createSelectProperty(subscription.automatic_tax?.disabled_reason),
+    "Billing Threshold Amount": createNumberProperty(subscription.billing_thresholds?.amount_gte),
+    "Reset Billing Cycle Anchor": createCheckboxProperty(subscription.billing_thresholds?.reset_billing_cycle_anchor),
   };
 
   // Add customer relation if we have the Notion page ID
   if (customerNotionPageId) {
-    properties["Customer"] = {
-      relation: [{ id: customerNotionPageId }],
-    };
+    properties["Customer"] = createRelationProperty(customerNotionPageId);
   }
 
   // Add latest invoice relation if we have the Notion page ID
   if (latestInvoiceNotionPageId) {
-    properties["Latest Invoice"] = {
-      relation: [{ id: latestInvoiceNotionPageId }],
-    };
+    properties["Latest Invoice"] = createRelationProperty(latestInvoiceNotionPageId);
   }
 
   // Enhanced default payment method with expanded details
@@ -158,16 +74,7 @@ export function stripeSubscriptionToNotionProperties(
     }
   }
 
-  properties["Default Payment Method"] = {
-    rich_text: [
-      {
-        type: "text",
-        text: {
-          content: defaultPaymentMethodText,
-        },
-      },
-    ],
-  };
+  properties["Default Payment Method"] = createRichTextProperty(defaultPaymentMethodText);
 
   // Enhanced default source with expanded details
   let defaultSourceText = "";
@@ -184,173 +91,67 @@ export function stripeSubscriptionToNotionProperties(
     }
   }
 
-  properties["Default Source"] = {
-    rich_text: [
-      {
-        type: "text",
-        text: {
-          content: defaultSourceText,
-        },
-      },
-    ],
-  };
+  properties["Default Source"] = createRichTextProperty(defaultSourceText);
 
   // Cancellation details
   if (subscription.cancellation_details) {
-    properties["Cancellation Reason"] = {
-      select: subscription.cancellation_details.reason ? 
-        { name: subscription.cancellation_details.reason } : null,
-    };
-    properties["Cancellation Feedback"] = {
-      select: subscription.cancellation_details.feedback ? 
-        { name: subscription.cancellation_details.feedback } : null,
-    };
-    properties["Cancellation Comment"] = {
-      rich_text: [
-        {
-          type: "text",
-          text: {
-            content: subscription.cancellation_details.comment || "",
-          },
-        },
-      ],
-    };
+    properties["Cancellation Reason"] = createSelectProperty(subscription.cancellation_details.reason);
+    properties["Cancellation Feedback"] = createSelectProperty(subscription.cancellation_details.feedback);
+    properties["Cancellation Comment"] = createRichTextProperty(subscription.cancellation_details.comment);
   }
 
   // Trial settings
   if (subscription.trial_settings) {
-    properties["Trial End Behavior"] = {
-      select: subscription.trial_settings.end_behavior?.missing_payment_method ? 
-        { name: subscription.trial_settings.end_behavior.missing_payment_method } : null,
-    };
+    properties["Trial End Behavior"] = createSelectProperty(subscription.trial_settings.end_behavior?.missing_payment_method);
   }
 
   // Pause collection
   if (subscription.pause_collection) {
-    properties["Pause Collection Behavior"] = {
-      select: subscription.pause_collection.behavior ? 
-        { name: subscription.pause_collection.behavior } : null,
-    };
-    properties["Pause Resumes At"] = {
-      date: subscription.pause_collection.resumes_at ? {
-        start: new Date(subscription.pause_collection.resumes_at * 1000).toISOString().split('T')[0],
-      } : null,
-    };
+    properties["Pause Collection Behavior"] = createSelectProperty(subscription.pause_collection.behavior);
+    properties["Pause Resumes At"] = createDateProperty(subscription.pause_collection.resumes_at);
   }
 
   // Pending invoice item interval
   if (subscription.pending_invoice_item_interval) {
-    properties["Pending Invoice Item Interval"] = {
-      select: { name: subscription.pending_invoice_item_interval.interval },
-    };
-    properties["Pending Invoice Item Interval Count"] = {
-      number: subscription.pending_invoice_item_interval.interval_count || 1,
-    };
+    properties["Pending Invoice Item Interval"] = createSelectProperty(subscription.pending_invoice_item_interval.interval);
+    properties["Pending Invoice Item Interval Count"] = createNumberProperty(subscription.pending_invoice_item_interval.interval_count || 1);
   }
 
   // Next pending invoice item invoice
-  properties["Next Pending Invoice Item Invoice"] = {
-    date: subscription.next_pending_invoice_item_invoice ? {
-      start: new Date(subscription.next_pending_invoice_item_invoice * 1000).toISOString().split('T')[0],
-    } : null,
-  };
+  properties["Next Pending Invoice Item Invoice"] = createDateProperty(subscription.next_pending_invoice_item_invoice);
 
   // Payment settings
   if (subscription.payment_settings) {
-    properties["Save Default Payment Method"] = {
-      select: subscription.payment_settings.save_default_payment_method ? 
-        { name: subscription.payment_settings.save_default_payment_method } : null,
-    };
+    properties["Save Default Payment Method"] = createSelectProperty(subscription.payment_settings.save_default_payment_method);
   }
 
   // Application and on behalf of
-  properties["Application"] = {
-    rich_text: [
-      {
-        type: "text",
-        text: {
-          content: subscription.application ? 
-            (typeof subscription.application === "string" ? subscription.application : subscription.application.id) : "",
-        },
-      },
-    ],
-  };
-
-  properties["On Behalf Of"] = {
-    rich_text: [
-      {
-        type: "text",
-        text: {
-          content: subscription.on_behalf_of || "",
-        },
-      },
-    ],
-  };
+  properties["Application"] = createRichTextProperty(stringFromObject(subscription.application));
+  properties["On Behalf Of"] = createRichTextProperty(stringFromObject(subscription.on_behalf_of));
 
   // Schedule
-  properties["Schedule"] = {
-    rich_text: [
-      {
-        type: "text",
-        text: {
-          content: subscription.schedule ? 
-            (typeof subscription.schedule === "string" ? subscription.schedule : subscription.schedule.id) : "",
-        },
-      },
-    ],
-  };
+  properties["Schedule"] = createRichTextProperty(stringFromObject(subscription.schedule));
 
   // Pending setup intent
-  properties["Pending Setup Intent"] = {
-    rich_text: [
-      {
-        type: "text",
-        text: {
-          content: subscription.pending_setup_intent ? 
-            (typeof subscription.pending_setup_intent === "string" ? subscription.pending_setup_intent : subscription.pending_setup_intent.id) : "",
-        },
-      },
-    ],
-  };
+  properties["Pending Setup Intent"] = createRichTextProperty(stringFromObject(subscription.pending_setup_intent));
 
   // Transfer data
   if (subscription.transfer_data) {
-    properties["Transfer Destination"] = {
-      rich_text: [
-        {
-          type: "text",
-          text: {
-            content: subscription.transfer_data.destination || "",
-          },
-        },
-      ],
-    };
-    properties["Transfer Amount Percent"] = {
-      number: subscription.transfer_data.amount_percent || null,
-    };
+    properties["Transfer Destination"] = createRichTextProperty(stringFromObject(subscription.transfer_data.destination));
+    properties["Transfer Amount Percent"] = createNumberProperty(subscription.transfer_data.amount_percent);
   }
 
   // Pending update
   if (subscription.pending_update) {
-    properties["Pending Update Expires At"] = {
-      date: subscription.pending_update.expires_at ? {
-        start: new Date(subscription.pending_update.expires_at * 1000).toISOString().split('T')[0],
-      } : null,
-    };
-    properties["Has Pending Update"] = {
-      checkbox: true,
-    };
+    properties["Pending Update Expires At"] = createDateProperty(subscription.pending_update.expires_at);
+    properties["Has Pending Update"] = createCheckboxProperty(true);
   } else {
-    properties["Has Pending Update"] = {
-      checkbox: false,
-    };
+    properties["Has Pending Update"] = createCheckboxProperty(false);
   }
 
   // Subscription items count and details
   const itemsCount = subscription.items?.data?.length || 0;
-  properties["Subscription Items Count"] = {
-    number: itemsCount,
-  };
+  properties["Subscription Items Count"] = createNumberProperty(itemsCount);
 
   // Primary item details (first item if available)
   if (subscription.items?.data && subscription.items.data.length > 0) {
@@ -359,34 +160,22 @@ export function stripeSubscriptionToNotionProperties(
     
     // Add Primary Price relation if we have the Notion page ID
     if (primaryPriceNotionPageId) {
-      properties["Primary Price"] = {
-        relation: [{ id: primaryPriceNotionPageId }],
-      };
+      properties["Primary Price"] = createRelationProperty(primaryPriceNotionPageId);
     }
 
     // Add Primary Product relation if we have the Notion page ID
     if (primaryProductNotionPageId) {
-      properties["Primary Product"] = {
-        relation: [{ id: primaryProductNotionPageId }],
-      };
+      properties["Primary Product"] = createRelationProperty(primaryProductNotionPageId);
     }
 
-    properties["Primary Price Amount"] = {
-      number: price.unit_amount || 0,
-    };
+    properties["Primary Price Amount"] = createNumberProperty(price.unit_amount || 0);
 
     if (price.recurring) {
-      properties["Primary Price Interval"] = {
-        select: { name: price.recurring.interval },
-      };
-      properties["Primary Price Interval Count"] = {
-        number: price.recurring.interval_count || 1,
-      };
+      properties["Primary Price Interval"] = createSelectProperty(price.recurring.interval);
+      properties["Primary Price Interval Count"] = createNumberProperty(price.recurring.interval_count || 1);
     }
 
-    properties["Primary Quantity"] = {
-      number: primaryItem.quantity || 1,
-    };
+    properties["Primary Quantity"] = createNumberProperty(primaryItem.quantity || 1);
   }
 
   // Calculate tax rate percentage from default_tax_rates if available
@@ -397,34 +186,9 @@ export function stripeSubscriptionToNotionProperties(
     taxRatePercentage = primaryTaxRate.percentage || 0;
   }
 
-  properties["Tax Rate Percentage"] = {
-    number: taxRatePercentage,
-  };
-
-  // Test clock
-  properties["Test Clock"] = {
-    rich_text: [
-      {
-        type: "text",
-        text: {
-          content: subscription.test_clock ? 
-            (typeof subscription.test_clock === "string" ? subscription.test_clock : subscription.test_clock.id) : "",
-        },
-      },
-    ],
-  };
-
-  // Metadata
-  properties["Metadata"] = {
-    rich_text: [
-      {
-        type: "text",
-        text: {
-          content: JSON.stringify(subscription.metadata || {}),
-        },
-      },
-    ],
-  };
+  properties["Tax Rate Percentage"] = createNumberProperty(taxRatePercentage);
+  properties["Test Clock"] = createRichTextProperty(stringFromObject(subscription.test_clock));
+  properties["Metadata"] = createRichTextProperty(JSON.stringify(subscription.metadata || {}));
 
   return properties;
 }

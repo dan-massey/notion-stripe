@@ -83,7 +83,16 @@ export class BackfillWorkflow extends WorkflowEntrypoint<
           return null;
         }
         const firstItem = stripeListResults.data[0];
-        return convertToNotionProperties(entityToBackfill, firstItem, notionToken, databaseIds);
+        const stripe = this.getStripe(event.payload.stripeMode);
+        return convertToNotionProperties(
+          entityToBackfill, 
+          firstItem, 
+          notionToken, 
+          databaseIds, 
+          event.payload.stripeAccountId,
+          this.env.STRIPE_ENTITY_COORDINATOR,
+          stripe
+        );
       }
     );
 
@@ -92,12 +101,19 @@ export class BackfillWorkflow extends WorkflowEntrypoint<
         return;
       }
       const obj = stripeListResults.data[0];
+      const stripe = this.getStripe(event.payload.stripeMode);
+      const id = this.env.ACCOUNT_DURABLE_OBJECT.idFromName(event.payload.stripeAccountId);
+      const accountStub = this.env.ACCOUNT_DURABLE_OBJECT.get(id);
       await writeToNotion(
         entityToBackfill,
         notionToken,
         databaseIds,
         obj,
-        notionProperties
+        notionProperties,
+        event.payload.stripeAccountId,
+        this.env.STRIPE_ENTITY_COORDINATOR,
+        stripe,
+        accountStub
       );
     });
 
@@ -106,7 +122,8 @@ export class BackfillWorkflow extends WorkflowEntrypoint<
         this.env.BACKFILL_KV,
         event.payload.stripeMode,
         event.payload.stripeAccountId,
-        event.payload.entitiesProcessed
+        event.payload.entitiesProcessed,
+        entityToBackfill
       );
     });
 

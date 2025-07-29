@@ -1,6 +1,5 @@
-import { stripeCustomerToNotionProperties } from "@/converters/customer";
-import { upsertPageByTitle } from "@/utils/notion-api";
 import { handleNotionError } from "../shared/utils";
+import { coordinatedUpsertCustomer } from "@/utils/coordinated-upsert";
 import type { HandlerContext, HandlerResult } from "../shared/types";
 import type Stripe from "stripe";
 
@@ -17,31 +16,11 @@ export async function handleCustomerEvent(
   }
 
   try {
-    const expandedCustomer = await context.stripe.customers.retrieve(customer.id, {
-      expand: [
-        'subscriptions',
-        'sources', 
-        'invoice_settings.default_payment_method',
-        'default_source'
-      ]
-    }, { stripeAccount: context.stripeAccountId });
-    
-    if (expandedCustomer.deleted) {
-      return { success: true, message: "Customer was deleted" };
-    }
-    
-    const properties = stripeCustomerToNotionProperties(expandedCustomer as Stripe.Customer);
-    
-    await upsertPageByTitle(
-      context.notionToken,
-      customerDatabaseId,
-      "Customer ID",
+    await coordinatedUpsertCustomer(
+      context,
       customer.id,
-      properties
+      customerDatabaseId
     );
-
-    // Clear any previous errors for this database since we succeeded
-    await context.account.setEntityError('customer', null);
     return { success: true };
   } catch (error) {
     await handleNotionError(error, context, 'customer');

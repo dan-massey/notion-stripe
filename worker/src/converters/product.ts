@@ -1,220 +1,57 @@
 import type Stripe from "stripe";
+import { 
+  createTitleProperty,
+  createRichTextProperty, 
+  createCheckboxProperty,
+  createUrlProperty,
+  createDateProperty,
+  createNumberProperty
+} from "@/utils/notion-properties";
 
 export function stripeProductToNotionProperties(product: Stripe.Product) {
   const properties: Record<string, any> = {
-    "Product ID": {
-      title: [
-        {
-          type: "text",
-          text: {
-            content: product.id,
-          },
-        },
-      ],
-    },
-    "Name": {
-      rich_text: [
-        {
-          type: "text",
-          text: {
-            content: product.name || "",
-          },
-        },
-      ],
-    },
-    "Active": {
-      checkbox: product.active || false,
-    },
-    "Description": {
-      rich_text: [
-        {
-          type: "text",
-          text: {
-            content: product.description || "",
-          },
-        },
-      ],
-    },
-    "Default Price": {
-      rich_text: [
-        {
-          type: "text",
-          text: {
-            content: typeof product.default_price === "string" 
-              ? product.default_price 
-              : product.default_price?.id || "",
-          },
-        },
-      ],
-    },
-    "Statement Descriptor": {
-      rich_text: [
-        {
-          type: "text",
-          text: {
-            content: product.statement_descriptor || "",
-          },
-        },
-      ],
-    },
-    "Unit Label": {
-      rich_text: [
-        {
-          type: "text",
-          text: {
-            content: product.unit_label || "",
-          },
-        },
-      ],
-    },
-    "Tax Code": {
-      rich_text: [
-        {
-          type: "text",
-          text: {
-            content: typeof product.tax_code === "string" 
-              ? product.tax_code 
-              : product.tax_code?.id || "",
-          },
-        },
-      ],
-    },
-    "URL": {
-      url: product.url || null,
-    },
-    "Shippable": {
-      checkbox: product.shippable || false,
-    },
-    "Live Mode": {
-      checkbox: product.livemode || false,
-    },
-    "Created Date": {
-      date: {
-        start: new Date(product.created * 1000).toISOString().split('T')[0],
-      },
-    },
-    "Updated Date": {
-      date: {
-        start: new Date(product.updated * 1000).toISOString().split('T')[0],
-      },
-    },
-    "Metadata": {
-      rich_text: [
-        {
-          type: "text",
-          text: {
-            content: JSON.stringify(product.metadata || {}),
-          },
-        },
-      ],
-    },
+    "Product ID": createTitleProperty(product.id),
+    "Name": createRichTextProperty(product.name),
+    "Active": createCheckboxProperty(product.active),
+    "Description": createRichTextProperty(product.description),
+    "Default Price": createRichTextProperty(
+      typeof product.default_price === "string" 
+        ? product.default_price 
+        : product.default_price?.id
+    ),
+    "Statement Descriptor": createRichTextProperty(product.statement_descriptor),
+    "Unit Label": createRichTextProperty(product.unit_label),
+    "Tax Code": createRichTextProperty(
+      typeof product.tax_code === "string" 
+        ? product.tax_code 
+        : product.tax_code?.id
+    ),
+    "URL": createUrlProperty(product.url),
+    "Shippable": createCheckboxProperty(product.shippable),
+    "Live Mode": createCheckboxProperty(product.livemode),
+    "Created Date": createDateProperty(product.created),
+    "Updated Date": createDateProperty(product.updated),
+    "Metadata": createRichTextProperty(JSON.stringify(product.metadata || {})),
   };
 
   // Handle images
-  if (product.images && product.images.length > 0) {
-    properties["Images Count"] = {
-      number: product.images.length,
-    };
-
-    properties["Images URLs"] = {
-      rich_text: [
-        {
-          type: "text",
-          text: {
-            content: product.images.join(", "),
-          },
-        },
-      ],
-    };
-  } else {
-    properties["Images Count"] = {
-      number: 0,
-    };
-
-    properties["Images URLs"] = {
-      rich_text: [
-        {
-          type: "text",
-          text: {
-            content: "",
-          },
-        },
-      ],
-    };
-  }
+  properties["Images Count"] = createNumberProperty(product.images?.length || 0);
+  properties["Images URLs"] = createRichTextProperty(product.images?.join(", ") || "");
 
   // Handle marketing features
-  if (product.marketing_features && product.marketing_features.length > 0) {
-    properties["Marketing Features Count"] = {
-      number: product.marketing_features.length,
-    };
+  const featuresText = product.marketing_features
+    ?.map(feature => feature.name || "")
+    .filter(name => name)
+    .join(", ") || "";
+  
+  properties["Marketing Features Count"] = createNumberProperty(product.marketing_features?.length || 0);
+  properties["Marketing Features"] = createRichTextProperty(featuresText);
 
-    const featuresText = product.marketing_features
-      .map(feature => feature.name || "")
-      .filter(name => name)
-      .join(", ");
-
-    properties["Marketing Features"] = {
-      rich_text: [
-        {
-          type: "text",
-          text: {
-            content: featuresText,
-          },
-        },
-      ],
-    };
-  } else {
-    properties["Marketing Features Count"] = {
-      number: 0,
-    };
-
-    properties["Marketing Features"] = {
-      rich_text: [
-        {
-          type: "text",
-          text: {
-            content: "",
-          },
-        },
-      ],
-    };
-  }
-
-  // Handle package dimensions
-  if (product.package_dimensions) {
-    properties["Package Height"] = {
-      number: product.package_dimensions.height || null,
-    };
-
-    properties["Package Length"] = {
-      number: product.package_dimensions.length || null,
-    };
-
-    properties["Package Width"] = {
-      number: product.package_dimensions.width || null,
-    };
-
-    properties["Package Weight"] = {
-      number: product.package_dimensions.weight || null,
-    };
-  } else {
-    properties["Package Height"] = {
-      number: null,
-    };
-
-    properties["Package Length"] = {
-      number: null,
-    };
-
-    properties["Package Width"] = {
-      number: null,
-    };
-
-    properties["Package Weight"] = {
-      number: null,
-    };
-  }
+  // Handle package dimensions  
+  properties["Package Height"] = createNumberProperty(product.package_dimensions?.height);
+  properties["Package Length"] = createNumberProperty(product.package_dimensions?.length);
+  properties["Package Width"] = createNumberProperty(product.package_dimensions?.width);
+  properties["Package Weight"] = createNumberProperty(product.package_dimensions?.weight);
 
   return properties;
 }
