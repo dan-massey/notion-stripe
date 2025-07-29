@@ -2,26 +2,9 @@ import type { AppContext, StripeMode } from "@/types";
 import { ensureAccountDo } from "@/utils/do";
 import { getNotionToken } from "@/utils/stripe";
 import {
-  handleCustomerEvent,
-  handleChargeEvent,
-  handleInvoiceEvent,
-  handleSubscriptionEvent,
-  type HandlerContext,
-  type HandlerResult,
-} from "./webhook-handlers";
-import type Stripe from "stripe";
-
-type WebhookEventHandler = (
-  event: Stripe.Event,
-  context: HandlerContext
-) => Promise<HandlerResult>;
-
-const EVENT_HANDLERS: Record<string, WebhookEventHandler> = {
-  customer: handleCustomerEvent,
-  charge: handleChargeEvent,
-  invoice: handleInvoiceEvent,
-  subscription: handleSubscriptionEvent,
-};
+  EVENT_HANDLERS,
+  type HandlerContext
+} from "./webhook/index";
 
 export const stripeWebhookHandler = async (c: AppContext) => {
   const modeFromUrl = c.req.param("mode") as StripeMode;
@@ -89,6 +72,7 @@ export const stripeWebhookHandler = async (c: AppContext) => {
     stripeAccountId,
     accountStatus,
     account,
+    env: c.env,
   };
 
   // Execute the handler

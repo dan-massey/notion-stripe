@@ -1,6 +1,6 @@
 {
   "id": "com.massey-consulting.notion-sync",
-  "version": "0.0.31",
+  "version": "0.0.32",
   "name": "Sync to DB - A Notion integration",
   "icon": "",
   "permissions": [
@@ -39,6 +39,22 @@
     {
       "permission": "payment_intent_read",
       "purpose": "Read payment intents"
+    },
+    {
+      "permission": "credit_note_read",
+      "purpose": "Read credit notes"
+    },
+    {
+      "permission": "plan_read",
+      "purpose": "Read plans, prices and products"
+    },
+    {
+      "permission": "product_read",
+      "purpose": "Read product information"
+    },
+    {
+      "permission": "promotion_code_read",
+      "purpose": "Read promotion codes"
     }
   ],
   "connect_permissions": null,

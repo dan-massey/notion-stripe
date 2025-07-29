@@ -14,6 +14,14 @@ import { getChargeSchema } from "@/schemas/charge";
 import { getInvoiceSchema } from "@/schemas/invoice";
 import { getSubscriptionSchema } from "@/schemas/subscription";
 import { ensureAccountDo } from "@/utils/do";
+import { getCreditNoteSchema } from "@/schemas/credit-note";
+import { getDisputeSchema } from "@/schemas/dispute";
+import { getInvoiceItemSchema } from "@/schemas/invoice-item";
+import { getPriceSchema } from "@/schemas/price";
+import { productSchema } from "@/schemas/product";
+import { getInvoiceLineItemSchema } from "@/schemas/invoice-line-item";
+import { getPromotionCodeSchema } from "@/schemas/promotion-code";
+import { getPaymentIntentSchema } from "@/schemas/payment-intent";
 
 export const getNotionLink = async (c: AppContext) => {
   const notionAuthLink = `${c.env.BASE_URL}/auth/signin?account_id=${c.get(
@@ -27,16 +35,7 @@ const resetNotionConnection = async (
   stripeAccountId: string,
   accountDo: DurableObjectStub<AccountDurableObject>
 ) => {
-  await accountDo.setNotionPages({
-    stripeAccountId: stripeAccountId,
-    stripeMode: c.get("stripeMode") || "test",
-    chargeDatabaseId: null,
-    customerDatabaseId: null,
-    invoiceDatabaseId: null,
-    parentPageId: null,
-    subscriptionDatabaseId: null,
-  });
-  await accountDo.clearErrors();
+  await accountDo.clearNotionPages();
 
   try {
     const token = await getNotionToken(c, stripeAccountId);
@@ -122,7 +121,7 @@ export const clearDatabaseLinks = async (c: AppContext) => {
     stripeAccountId,
     c.get("stripeMode")
   );
-  await accountDo.clearErrors();
+
   await accountDo.clearNotionPages();
 
   const resp: AccountStatus | null = await accountDo.getStatus();
@@ -185,27 +184,89 @@ export const setUpDatabases = async (c: AppContext) => {
   const customersDb = await createDatabase(
     notionToken,
     parentPageId,
-    "Stripe Customers",
+    "Customers",
     customerSchema
   );
+
+  const paymentIntentDb = await createDatabase(
+    notionToken,
+    parentPageId,
+    "Payments",
+    getPaymentIntentSchema(customersDb.id)
+  );
+
   const chargesDb = await createDatabase(
     notionToken,
     parentPageId,
-    "Stripe Charges",
-    getChargeSchema(customersDb.id)
+    "Charges",
+    getChargeSchema(customersDb.id, paymentIntentDb.id)
   );
   const invoicesDb = await createDatabase(
     notionToken,
     parentPageId,
-    "Stripe Invoices",
-    getInvoiceSchema(customersDb.id)
+    "Invoices",
+    getInvoiceSchema(customersDb.id, chargesDb.id, paymentIntentDb.id)
+  );
+
+  const creditNoteDb = await createDatabase(
+    notionToken,
+    parentPageId,
+    "Credit Notes",
+    getCreditNoteSchema(customersDb.id, invoicesDb.id)
+  );
+
+  const disputeDb = await createDatabase(
+    notionToken,
+    parentPageId,
+    "Disputes",
+    getDisputeSchema(chargesDb.id, paymentIntentDb.id)
+  );
+
+  const productDb = await createDatabase(
+    notionToken,
+    parentPageId,
+    "Products",
+    productSchema
+  );
+
+  const priceDb = await createDatabase(
+    notionToken,
+    parentPageId,
+    "Prices",
+    getPriceSchema(productDb.id)
   );
 
   const subscriptionDb = await createDatabase(
     notionToken,
     parentPageId,
-    "Stripe Subscriptions",
-    getSubscriptionSchema(customersDb.id, invoicesDb.id)
+    "Subscriptions",
+    getSubscriptionSchema(
+      customersDb.id,
+      invoicesDb.id,
+      priceDb.id,
+      productDb.id
+    )
+  );
+
+  const invoiceItemDb = await createDatabase(
+    notionToken,
+    parentPageId,
+    "Invoice Items",
+    getInvoiceItemSchema(customersDb.id, invoicesDb.id, priceDb.id)
+  );
+
+  const invoiceLineItemDb = await createDatabase(
+    notionToken,
+    parentPageId,
+    "Invoice Line Items",
+    getInvoiceLineItemSchema(invoicesDb.id, priceDb.id)
+  );
+
+  const promotionCodeDb = await createDatabase(
+    notionToken,
+    parentPageId,
+    "Promotion Codes",
+    getPromotionCodeSchema(customersDb.id)
   );
 
   const accountDo = await ensureAccountDo(
@@ -214,18 +275,24 @@ export const setUpDatabases = async (c: AppContext) => {
     c.get("stripeMode")
   );
 
-  const resp = {
-    chargeDatabaseId: chargesDb.id,
-    customerDatabaseId: customersDb.id,
-    invoiceDatabaseId: invoicesDb.id,
-    parentPageId: parentPageId,
-    subscriptionDatabaseId: subscriptionDb.id,
-  };
-
   await accountDo.setNotionPages({
     stripeAccountId: stripeAccountId,
     stripeMode: c.get("stripeMode") || "test",
-    ...resp,
+    parentPageId: parentPageId,
+    databases: {
+      customer: { pageId: customersDb.id, title: "Customers" },
+      charge: { pageId: chargesDb.id, title: "Charges" },
+      credit_note: { pageId: creditNoteDb.id, title: "Credit Notes" },
+      dispute: { pageId: disputeDb.id, title: "Disputes" },
+      invoice: { pageId: invoicesDb.id, title: "Invoices" },
+      invoiceitem: { pageId: invoiceItemDb.id, title: "Invoice Items" },
+      line_item: { pageId: invoiceLineItemDb.id, title: "Invoice Line Items" },
+      price: { pageId: priceDb.id, title: "Prices" },
+      product: { pageId: productDb.id, title: "Products" },
+      promotion_code: { pageId: promotionCodeDb.id, title: "Promotion Codes" },
+      subscription: { pageId: subscriptionDb.id, title: "Subscriptions" },
+      payment_intent: { pageId: paymentIntentDb.id, title: "Payments" },
+    },
   });
 
   const updatedAccountInfo: AccountStatus | null = await accountDo.getStatus();

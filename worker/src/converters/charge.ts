@@ -1,6 +1,10 @@
 import type Stripe from "stripe";
 
-export function stripeChargeToNotionProperties(charge: Stripe.Charge, customerNotionPageId?: string) {
+export function stripeChargeToNotionProperties(
+  charge: Stripe.Charge,
+  customerNotionPageId: string | null,
+  paymentIntentNotionPageId: string | null
+) {
   const properties: Record<string, any> = {
     "Charge ID": {
       title: [
@@ -12,7 +16,7 @@ export function stripeChargeToNotionProperties(charge: Stripe.Charge, customerNo
         },
       ],
     },
-    "Amount": {
+    Amount: {
       number: charge.amount,
     },
     "Amount Captured": {
@@ -21,7 +25,7 @@ export function stripeChargeToNotionProperties(charge: Stripe.Charge, customerNo
     "Amount Refunded": {
       number: charge.amount_refunded,
     },
-    "Currency": {
+    Currency: {
       rich_text: [
         {
           type: "text",
@@ -31,19 +35,19 @@ export function stripeChargeToNotionProperties(charge: Stripe.Charge, customerNo
         },
       ],
     },
-    "Status": {
+    Status: {
       select: charge.status ? { name: charge.status } : null,
     },
-    "Paid": {
+    Paid: {
       checkbox: charge.paid || false,
     },
-    "Captured": {
+    Captured: {
       checkbox: charge.captured || false,
     },
-    "Refunded": {
+    Refunded: {
       checkbox: charge.refunded || false,
     },
-    "Disputed": {
+    Disputed: {
       checkbox: charge.disputed || false,
     },
     "Live Mode": {
@@ -51,10 +55,10 @@ export function stripeChargeToNotionProperties(charge: Stripe.Charge, customerNo
     },
     "Created Date": {
       date: {
-        start: new Date(charge.created * 1000).toISOString().split('T')[0],
+        start: new Date(charge.created * 1000).toISOString().split("T")[0],
       },
     },
-    "Description": {
+    Description: {
       rich_text: [
         {
           type: "text",
@@ -85,14 +89,15 @@ export function stripeChargeToNotionProperties(charge: Stripe.Charge, customerNo
         {
           type: "text",
           text: {
-            content: typeof charge.balance_transaction === "string" 
-              ? charge.balance_transaction 
-              : charge.balance_transaction?.id || "",
+            content:
+              typeof charge.balance_transaction === "string"
+                ? charge.balance_transaction
+                : charge.balance_transaction?.id || "",
           },
         },
       ],
     },
-    "Application": {
+    Application: {
       rich_text: [
         {
           type: "text",
@@ -105,7 +110,7 @@ export function stripeChargeToNotionProperties(charge: Stripe.Charge, customerNo
     "Application Fee Amount": {
       number: charge.application_fee_amount || null,
     },
-    "Transfer": {
+    Transfer: {
       rich_text: [
         {
           type: "text",
@@ -145,7 +150,7 @@ export function stripeChargeToNotionProperties(charge: Stripe.Charge, customerNo
         },
       ],
     },
-    "Review": {
+    Review: {
       rich_text: [
         {
           type: "text",
@@ -158,7 +163,7 @@ export function stripeChargeToNotionProperties(charge: Stripe.Charge, customerNo
     "Refund Count": {
       number: charge.refunds?.data?.length || 0,
     },
-    "Metadata": {
+    Metadata: {
       rich_text: [
         {
           type: "text",
@@ -177,31 +182,12 @@ export function stripeChargeToNotionProperties(charge: Stripe.Charge, customerNo
     };
   }
 
-  // Enhanced Payment Intent with expanded details
-  let paymentIntentText = "";
-  if (charge.payment_intent) {
-    if (typeof charge.payment_intent === "string") {
-      paymentIntentText = charge.payment_intent;
-    } else {
-      // Expanded payment intent object
-      const pi = charge.payment_intent;
-      paymentIntentText = `${pi.id} (${pi.status})`;
-      if (pi.client_secret) {
-        paymentIntentText += ` - ${pi.client_secret.slice(-10)}`;
-      }
-    }
+  // Add Payment Intent relation if we have the Notion page ID
+  if (paymentIntentNotionPageId) {
+    properties["Payment Intent"] = {
+      relation: [{ id: paymentIntentNotionPageId }],
+    };
   }
-
-  properties["Payment Intent"] = {
-    rich_text: [
-      {
-        type: "text",
-        text: {
-          content: paymentIntentText,
-        },
-      },
-    ],
-  };
 
   // Enhanced Payment Method with comprehensive details
   let paymentMethodText = "";
@@ -221,7 +207,7 @@ export function stripeChargeToNotionProperties(charge: Stripe.Charge, customerNo
       const pm = charge.payment_method as any; // Type assertion to handle expanded object
       paymentMethodType = pm.type || "";
       paymentMethodText = `${pm.type}: ${pm.id}`;
-      
+
       if (pm.card) {
         cardBrand = pm.card.brand || "";
         cardLast4 = pm.card.last4 || "";
@@ -238,7 +224,7 @@ export function stripeChargeToNotionProperties(charge: Stripe.Charge, customerNo
   if (charge.payment_method_details && !paymentMethodText) {
     paymentMethodType = charge.payment_method_details.type;
     paymentMethodText = `${charge.payment_method_details.type}`;
-    
+
     if (charge.payment_method_details.card) {
       const card = charge.payment_method_details.card;
       cardBrand = card.brand || "";
@@ -248,7 +234,7 @@ export function stripeChargeToNotionProperties(charge: Stripe.Charge, customerNo
       cardExpMonth = card.exp_month;
       cardExpYear = card.exp_year;
       paymentMethodText += `: ${card.brand} ****${card.last4}`;
-      
+
       if (card.wallet) {
         paymentMethodText += ` (${card.wallet.type})`;
       }
@@ -269,7 +255,9 @@ export function stripeChargeToNotionProperties(charge: Stripe.Charge, customerNo
       }
     } else if (charge.payment_method_details.paypal) {
       const paypal = charge.payment_method_details.paypal;
-      paymentMethodText += `: ${paypal.payer_email || paypal.payer_id || "PayPal"}`;
+      paymentMethodText += `: ${
+        paypal.payer_email || paypal.payer_id || "PayPal"
+      }`;
     } else if (charge.payment_method_details.cashapp) {
       const cashapp = charge.payment_method_details.cashapp;
       paymentMethodText += `: ${cashapp.cashtag || "Cash App"}`;
@@ -438,7 +426,9 @@ export function stripeChargeToNotionProperties(charge: Stripe.Charge, customerNo
     };
 
     properties["Risk Level"] = {
-      select: charge.outcome.risk_level ? { name: charge.outcome.risk_level } : null,
+      select: charge.outcome.risk_level
+        ? { name: charge.outcome.risk_level }
+        : null,
     };
 
     properties["Risk Score"] = {
@@ -449,11 +439,15 @@ export function stripeChargeToNotionProperties(charge: Stripe.Charge, customerNo
   // Fraud details
   if (charge.fraud_details) {
     properties["Fraud Stripe Report"] = {
-      select: charge.fraud_details.stripe_report ? { name: charge.fraud_details.stripe_report } : null,
+      select: charge.fraud_details.stripe_report
+        ? { name: charge.fraud_details.stripe_report }
+        : null,
     };
 
     properties["Fraud User Report"] = {
-      select: charge.fraud_details.user_report ? { name: charge.fraud_details.user_report } : null,
+      select: charge.fraud_details.user_report
+        ? { name: charge.fraud_details.user_report }
+        : null,
     };
   }
 
@@ -607,7 +601,8 @@ export function generatePaymentMethodSummary(charge: Stripe.Charge): string {
         if (card.funding) summary += ` (${card.funding})`;
         if (card.country) summary += ` [${card.country}]`;
         if (card.wallet) summary += ` via ${card.wallet.type}`;
-        if (card.three_d_secure?.result) summary += ` 3DS:${card.three_d_secure.result}`;
+        if (card.three_d_secure?.result)
+          summary += ` 3DS:${card.three_d_secure.result}`;
       }
       break;
 
@@ -623,7 +618,8 @@ export function generatePaymentMethodSummary(charge: Stripe.Charge): string {
       const paypal = charge.payment_method_details.paypal;
       if (paypal) {
         summary += paypal.payer_email || paypal.payer_id || "PayPal Account";
-        if (paypal.seller_protection?.status) summary += ` [Protection: ${paypal.seller_protection.status}]`;
+        if (paypal.seller_protection?.status)
+          summary += ` [Protection: ${paypal.seller_protection.status}]`;
       }
       break;
 

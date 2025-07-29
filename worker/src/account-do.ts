@@ -1,5 +1,10 @@
 import { DurableObject } from "cloudflare:workers";
-import type { StripeMode, Env } from "@/types";
+import type {
+  StripeMode,
+  Env,
+  SupportedEntities,
+  SupportedEntity,
+} from "@/types";
 
 type SubscriptionStatus = {
   stripeSubscriptionStatus?: string | null;
@@ -9,16 +14,29 @@ type SubscriptionStatus = {
   cancelAt?: number | null;
 };
 
-const ENTITIES = ["customer", "invoice", "charge", "subscription"] as const;
-type Entity = (typeof ENTITIES)[number];
+const ENTITIES: SupportedEntities = [
+  "customer",
+  "invoice",
+  "charge",
+  "subscription",
+  "credit_note",
+  "dispute",
+  "invoiceitem",
+  "line_item",
+  "price",
+  "product",
+  "promotion_code",
+  "payment_intent"
+] as const;
 
 type Database = {
   lastError?: string | null | undefined;
-  pageId: string | null | undefined;
+  pageId: string | undefined;
+  title: string | undefined;
 };
 
 type Databases = {
-  [K in Entity]: Database;
+  [K in SupportedEntity]: Database;
 };
 
 type NotionConnection = {
@@ -60,7 +78,7 @@ export class AccountDurableObject extends DurableObject<Env> {
     if (!this.accountStatus.notionConnection.databases) {
       this.accountStatus.notionConnection.databases = ENTITIES.reduce(
         (acc, entity) => {
-          acc[entity] = { pageId: null, lastError: null };
+          acc[entity] = { pageId: undefined, lastError: null, title: undefined };
           return acc;
         },
         {} as Databases
@@ -86,7 +104,7 @@ export class AccountDurableObject extends DurableObject<Env> {
     return this.accountStatus.subscription;
   }
 
-  getDbForEntity(entity: Entity) {
+  getDbForEntity(entity: SupportedEntity) {
     return this.databases[entity];
   }
 
@@ -94,13 +112,19 @@ export class AccountDurableObject extends DurableObject<Env> {
     await this.ctx.storage.put("accountStatus", this.accountStatus);
   }
 
-  async setUp({stripeAccountId, stripeMode}: {stripeAccountId: string, stripeMode: StripeMode}) {
+  async setUp({
+    stripeAccountId,
+    stripeMode,
+  }: {
+    stripeAccountId: string;
+    stripeMode: StripeMode;
+  }) {
     if (this.accountStatus) {
       return;
     }
     this.accountStatus = {
       stripeAccountId: stripeAccountId,
-      stripeMode: stripeMode
+      stripeMode: stripeMode,
     };
 
     await this.saveState();
@@ -169,19 +193,13 @@ export class AccountDurableObject extends DurableObject<Env> {
     stripeAccountId,
     stripeMode,
     parentPageId,
-    customerDatabaseId,
-    invoiceDatabaseId,
-    chargeDatabaseId,
-    subscriptionDatabaseId,
+    databases,
   }: {
     stripeAccountId: string;
     stripeMode: StripeMode;
     parentPageId: string | null;
-    customerDatabaseId: string | null;
-    invoiceDatabaseId: string | null;
-    chargeDatabaseId: string | null;
-    subscriptionDatabaseId: string | null;
-  }): Promise<void> {
+    databases: Databases | null;
+  }) {
     if (!this.accountStatus) {
       console.warn(
         "Account status not initialized, creating with provided account info"
@@ -200,12 +218,11 @@ export class AccountDurableObject extends DurableObject<Env> {
       this.accountStatus.notionConnection.parentPageId = parentPageId;
     }
 
-    this.databases.customer = { pageId: customerDatabaseId };
-    this.databases.invoice = { pageId: invoiceDatabaseId };
-    this.databases.charge = { pageId: chargeDatabaseId };
-    this.databases.subscription = { pageId: subscriptionDatabaseId };
+    this.accountStatus.notionConnection.databases = databases;
 
     await this.saveState();
+
+    return this.accountStatus;
   }
 
   async clearNotionPages(): Promise<void> {
@@ -219,21 +236,8 @@ export class AccountDurableObject extends DurableObject<Env> {
     await this.saveState();
   }
 
-  async clearErrors(): Promise<AccountStatus | null> {
-    if (this.accountStatus?.notionConnection?.databases) {
-      ENTITIES.forEach((entity) => {
-        this.databases[entity].lastError = null;
-      });
-    }
-    if (this.accountStatus) {
-      this.accountStatus.tokenError = null;
-      await this.saveState();
-    }
-    return this.accountStatus;
-  }
-
   async setEntityError(
-    entity: Entity,
+    entity: SupportedEntity,
     value: string | null
   ): Promise<AccountStatus | null> {
     if (!this.accountStatus) {

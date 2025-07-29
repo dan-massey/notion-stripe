@@ -131,58 +131,28 @@ export const NotionDatabasesLinked: React.FC = () => {
       <Box css={{ font: "subheading" }}>Step 2</Box>
       <Box css={{ font: "heading" }}>Linked Notion Databases</Box>
       <Box css={{ stack: "x", gapX: "small", alignY: "center" }}>
-        <Icon name="checkCircle" css={{ fill: "success" }} /> 4 Databases
+        <Icon name="checkCircle" css={{ fill: "success" }} /> {databases && Object.keys(databases).length} Databases
         Connected
       </Box>
       <Box css={{ stack: "y", gapY: "small" }}>
-        <Link
-          target="_blank"
-          href={makeNotionLink(databases?.customer.pageId)}
-        >
-          👥 Customers Database{" "}
-          {databases?.customer.lastError && (
-            <Inline css={{ color: "critical" }}>
-              Something is wrong with this database:{" "}
-              {databases?.customer.lastError}
-            </Inline>
-          )}
-        </Link>
-        <Link
-          target="_blank"
-          href={makeNotionLink(databases?.charge.pageId)}
-        >
-          💳 Charges Database{" "}
-          {databases?.charge.lastError && (
-            <Inline css={{ color: "critical" }}>
-              Something is wrong with this database:{" "}
-              {databases?.charge.lastError}
-            </Inline>
-          )}
-        </Link>
-        <Link
-          target="_blank"
-          href={makeNotionLink(databases?.subscription.pageId)}
-        >
-          🔄 Subscriptions Database{" "}
-          {databases?.subscription.lastError && (
-            <Inline css={{ color: "critical" }}>
-              Something is wrong with this database:{" "}
-              {databases?.subscription.lastError}
-            </Inline>
-          )}
-        </Link>
-        <Link
-          target="_blank"
-          href={makeNotionLink(databases?.invoice.pageId)}
-        >
-          📄 Invoices Database{" "}
-          {databases?.invoice.lastError && (
-            <Inline css={{ color: "critical" }}>
-              Something is wrong with this database:{" "}
-              {databases?.invoice.lastError}
-            </Inline>
-          )}
-        </Link>
+        {databases &&
+          Object.keys(databases).map((kind) => {
+            return (
+              <Link
+                key={kind}
+                target="_blank"
+                href={makeNotionLink(databases[kind].pageId)}
+              >
+                {databases[kind].title}
+                {databases[kind].lastError && (
+                  <Inline css={{ color: "critical" }}>
+                    Something is wrong with this database:{" "}
+                    {databases[kind].lastError}
+                  </Inline>
+                )}
+              </Link>
+            );
+          })}
       </Box>
       <Box
         css={{
@@ -210,7 +180,9 @@ export const NotionDatabasesLinked: React.FC = () => {
         <Button
           type="secondary"
           css={{ width: "1/2" }}
-          href={makeNotionLink(account?.account?.notionConnection?.parentPageId)}
+          href={makeNotionLink(
+            account?.account?.notionConnection?.parentPageId
+          )}
           target="_blank"
         >
           <Icon name="external" />

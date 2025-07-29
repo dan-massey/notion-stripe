@@ -2,7 +2,7 @@ import type {
   CreateDatabaseParameters
 } from "@notionhq/client/build/src/api-endpoints";
 
-export const getChargeSchema = (customerDatabaseId: string): CreateDatabaseParameters["properties"] => ({
+export const getChargeSchema = (customerDatabaseId: string, paymentIntentDatabaseId: string): CreateDatabaseParameters["properties"] => ({
   "Charge ID": {
     "type": "title" as const,
     "title": {}
@@ -76,8 +76,12 @@ export const getChargeSchema = (customerDatabaseId: string): CreateDatabaseParam
     "rich_text": {}
   },
   "Payment Intent": {
-    "type": "rich_text" as const,
-    "rich_text": {}
+    "type": "relation" as const,
+    "relation": {
+      "database_id": paymentIntentDatabaseId,
+      "type": "dual_property" as const,
+      "dual_property": {}
+    }
   },
   "Payment Method": {
     "type": "rich_text" as const,

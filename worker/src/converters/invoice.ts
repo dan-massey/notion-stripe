@@ -1,6 +1,11 @@
 import type Stripe from "stripe";
 
-export function stripeInvoiceToNotionProperties(invoice: Stripe.Invoice, customerNotionPageId?: string) {
+export function stripeInvoiceToNotionProperties(
+  invoice: Stripe.Invoice, 
+  customerNotionPageId: string | null,
+  primaryChargeNotionPageId: string | null,
+  primaryPaymentIntentNotionPageId: string | null
+) {
   const properties: Record<string, any> = {
     "Invoice ID": {
       title: [
@@ -59,6 +64,12 @@ export function stripeInvoiceToNotionProperties(invoice: Stripe.Invoice, custome
     "Ending Balance": {
       number: invoice.ending_balance,
     },
+    "Amount Overpaid": {
+      number: invoice.amount_overpaid || null,
+    },
+    "Amount Shipping": {
+      number: invoice.amount_shipping || null,
+    },
     "Created Date": {
       date: {
         start: new Date(invoice.created * 1000).toISOString().split('T')[0],
@@ -77,6 +88,21 @@ export function stripeInvoiceToNotionProperties(invoice: Stripe.Invoice, custome
     "Period End": {
       date: invoice.period_end ? {
         start: new Date(invoice.period_end * 1000).toISOString().split('T')[0],
+      } : null,
+    },
+    "Finalized At": {
+      date: invoice.status_transitions?.finalized_at ? {
+        start: new Date(invoice.status_transitions.finalized_at * 1000).toISOString().split('T')[0],
+      } : null,
+    },
+    "Paid At": {
+      date: invoice.status_transitions?.paid_at ? {
+        start: new Date(invoice.status_transitions.paid_at * 1000).toISOString().split('T')[0],
+      } : null,
+    },
+    "Voided At": {
+      date: invoice.status_transitions?.voided_at ? {
+        start: new Date(invoice.status_transitions.voided_at * 1000).toISOString().split('T')[0],
       } : null,
     },
     "Billing Reason": {
@@ -184,6 +210,31 @@ export function stripeInvoiceToNotionProperties(invoice: Stripe.Invoice, custome
     "Line Items Count": {
       number: invoice.lines?.data?.length || 0,
     },
+    "Payments Count": {
+      number: invoice.payments?.data?.length || 0,
+    },
+    "Next Payment Attempt": {
+      date: invoice.next_payment_attempt ? {
+        start: new Date(invoice.next_payment_attempt * 1000).toISOString().split('T')[0],
+      } : null,
+    },
+    "Webhooks Delivered At": {
+      date: invoice.webhooks_delivered_at ? {
+        start: new Date(invoice.webhooks_delivered_at * 1000).toISOString().split('T')[0],
+      } : null,
+    },
+    "Test Clock": {
+      rich_text: [
+        {
+          type: "text",
+          text: {
+            content: typeof invoice.test_clock === "string" 
+              ? invoice.test_clock 
+              : invoice.test_clock?.id || "",
+          },
+        },
+      ],
+    },
     "Metadata": {
       rich_text: [
         {
@@ -196,10 +247,24 @@ export function stripeInvoiceToNotionProperties(invoice: Stripe.Invoice, custome
     },
   };
 
-  // Add customer relation if we have the Notion page ID
+  // Add customer relation
   if (customerNotionPageId) {
     properties["Customer"] = {
       relation: [{ id: customerNotionPageId }],
+    };
+  }
+
+  // Add primary charge relation
+  if (primaryChargeNotionPageId) {
+    properties["Primary Charge"] = {
+      relation: [{ id: primaryChargeNotionPageId }],
+    };
+  }
+
+  // Add primary payment intent relation
+  if (primaryPaymentIntentNotionPageId) {
+    properties["Primary Payment Intent"] = {
+      relation: [{ id: primaryPaymentIntentNotionPageId }],
     };
   }
 

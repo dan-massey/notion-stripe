@@ -282,7 +282,8 @@ export async function upsertPageByTitle(
   databaseId: string,
   titleProperty: string,
   titleValue: string,
-  properties: Record<string, any>
+  properties: Record<string, any>,
+  mergeMode: 'replace' | 'merge' = 'merge'
 ): Promise<CreatePageResponse | UpdatePageResponse> {
   console.log(
     `[UpsertPage] Starting upsert for title: "${titleValue}" in database: ${databaseId}`
@@ -308,9 +309,19 @@ export async function upsertPageByTitle(
   if (queryResult.results.length > 0) {
     // Update existing page
     const existingPage = queryResult.results[0] as PageObjectResponse;
-    console.log(`[UpsertPage] Updating existing page: ${existingPage.id}`);
+    
+    let finalProperties = properties;
+    if (mergeMode === 'merge') {
+      // Only update properties that are provided (non-null/undefined)
+      finalProperties = Object.fromEntries(
+        Object.entries(properties).filter(([_, value]) => value != null)
+      );
+      console.log(`[UpsertPage] Merge mode: filtering ${Object.keys(properties).length - Object.keys(finalProperties).length} null/undefined properties`);
+    }
+    
+    console.log(`[UpsertPage] Updating existing page: ${existingPage.id} with ${Object.keys(finalProperties).length} properties`);
     return updatePage(authToken, existingPage.id, {
-      properties,
+      properties: finalProperties,
     });
   } else {
     // Create new page

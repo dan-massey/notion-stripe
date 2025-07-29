@@ -2,7 +2,9 @@ import type { CreateDatabaseParameters } from "@notionhq/client/build/src/api-en
 
 export const getSubscriptionSchema = (
   customerDatabaseId: string,
-  invoiceDatabaseId: string
+  invoiceDatabaseId: string,
+  priceDatabaseId: string,
+  productDatabaseId: string
 ): CreateDatabaseParameters["properties"] => ({
   "Subscription ID": {
     type: "title" as const,
@@ -276,14 +278,25 @@ export const getSubscriptionSchema = (
       format: "number" as const,
     },
   },
-  "Primary Price ID": {
-    type: "rich_text" as const,
-    rich_text: {},
+
+  "Primary Price": {
+    type: "relation" as const,
+    relation: {
+      database_id: priceDatabaseId,
+      type: "dual_property" as const,
+      dual_property: {},
+    },
   },
-  "Primary Product ID": {
-    type: "rich_text" as const,
-    rich_text: {},
+
+  "Primary Product": {
+    type: "relation" as const,
+    relation: {
+      database_id: productDatabaseId,
+      type: "dual_property" as const,
+      dual_property: {},
+    },
   },
+
   "Primary Price Amount": {
     type: "number" as const,
     number: {

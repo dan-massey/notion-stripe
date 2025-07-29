@@ -1,35 +1,39 @@
-import type { AppContext } from "@/types";
+import type { AppContext, SupportedEntity, BackfillTaskStatus } from "@/types";
 import { getStatus, setStatus } from "@/utils/backfill-status";
 
 export const startBackfill = async (c: AppContext) => {
+  const entities: SupportedEntity[] = [
+    "customer",
+    "payment_intent",
+    "charge",
+    "invoice",
+    "credit_note",
+    "dispute",
+    "product",
+    "price",
+    "subscription",
+    "invoiceitem",
+    "promotion_code",
+  ];
+
+  const statuses = Object.fromEntries(
+    entities.map((entity) => [
+      entity,
+      {
+        started: false,
+        completed: false,
+        startingAfter: undefined,
+      },
+    ])
+  );
+
   await c.env.BACKFILL_WORKFLOW.create({
     params: {
       stripeAccountId: c.get("stripeAccountId"),
       stripeMode: c.get("stripeMode"),
-      entitiesToBackfill: ["customer", "charge", "invoice", "subscription"],
+      entitiesToBackfill: entities,
       entitiesProcessed: 0,
-      entityStatus: {
-        customer: {
-          started: false,
-          completed: false,
-          nextPage: undefined,
-        },
-        charge: {
-          started: false,
-          completed: false,
-          nextPage: undefined,
-        },
-        invoice: {
-          started: false,
-          completed: false,
-          nextPage: undefined,
-        },
-        subscription: {
-          started: false,
-          completed: false,
-          nextPage: undefined,
-        },
-      },
+      entityStatus: statuses,
     },
   });
   const status = {
@@ -55,6 +59,6 @@ export const getBackfillStatus = async (c: AppContext) => {
   );
 
   return c.json({
-    status
+    status,
   });
 };

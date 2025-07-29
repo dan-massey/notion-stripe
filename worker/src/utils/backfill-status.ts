@@ -12,7 +12,9 @@ export const setStatus = async (
   if (!stripeAccountId || !stripeMode) {
     return;
   }
-  await kv.put(makeKey(stripeMode, stripeAccountId), JSON.stringify(status));
+  await kv.put(makeKey(stripeMode, stripeAccountId), JSON.stringify(status), {
+    expirationTtl: 60 * 60,
+  });
 };
 
 export const getStatus = async (
@@ -29,4 +31,3 @@ export const getStatus = async (
     return JSON.parse(val) as BackfillWorkflowStatus;
   }
 };
-

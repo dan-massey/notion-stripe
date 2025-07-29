@@ -2,8 +2,10 @@ import type Stripe from "stripe";
 
 export function stripeSubscriptionToNotionProperties(
   subscription: Stripe.Subscription, 
-  customerNotionPageId?: string,
-  latestInvoiceNotionPageId?: string
+  customerNotionPageId: string | null,
+  latestInvoiceNotionPageId: string | null,
+  primaryPriceNotionPageId: string | null,
+  primaryProductNotionPageId: string | null
 ) {
   const properties: Record<string, any> = {
     "Subscription ID": {
@@ -355,27 +357,19 @@ export function stripeSubscriptionToNotionProperties(
     const primaryItem = subscription.items.data[0];
     const price = primaryItem.price;
     
-    properties["Primary Price ID"] = {
-      rich_text: [
-        {
-          type: "text",
-          text: {
-            content: price.id || "",
-          },
-        },
-      ],
-    };
+    // Add Primary Price relation if we have the Notion page ID
+    if (primaryPriceNotionPageId) {
+      properties["Primary Price"] = {
+        relation: [{ id: primaryPriceNotionPageId }],
+      };
+    }
 
-    properties["Primary Product ID"] = {
-      rich_text: [
-        {
-          type: "text",
-          text: {
-            content: typeof price.product === "string" ? price.product : price.product?.id || "",
-          },
-        },
-      ],
-    };
+    // Add Primary Product relation if we have the Notion page ID
+    if (primaryProductNotionPageId) {
+      properties["Primary Product"] = {
+        relation: [{ id: primaryProductNotionPageId }],
+      };
+    }
 
     properties["Primary Price Amount"] = {
       number: price.unit_amount || 0,

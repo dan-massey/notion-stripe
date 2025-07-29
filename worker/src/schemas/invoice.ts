@@ -2,7 +2,12 @@ import type {
   CreateDatabaseParameters
 } from "@notionhq/client/build/src/api-endpoints";
 
-export const getInvoiceSchema = (customerDatabaseId: string): CreateDatabaseParameters["properties"] => ({
+export const getInvoiceSchema = (
+  customerDatabaseId: string,
+  chargeDatabaseId: string,
+  paymentIntentDatabaseId: string
+): CreateDatabaseParameters["properties"] => {
+  const properties: CreateDatabaseParameters["properties"] = {
   "Invoice ID": {
     "type": "title" as const,
     "title": {}
@@ -330,12 +335,6 @@ export const getInvoiceSchema = (customerDatabaseId: string): CreateDatabasePara
       "format": "number" as const
     }
   },
-  "Tax Rate Percentage": {
-    "type": "number" as const,
-    "number": {
-      "format": "percent" as const
-    }
-  },
   "Webhooks Delivered At": {
     "type": "date" as const,
     "date": {}
@@ -343,6 +342,12 @@ export const getInvoiceSchema = (customerDatabaseId: string): CreateDatabasePara
   "Test Clock": {
     "type": "rich_text" as const,
     "rich_text": {}
+  },
+  "Tax Rate Percentage": {
+    "type": "number" as const,
+    "number": {
+      "format": "percent" as const
+    }
   },
   "Metadata": {
     "type": "rich_text" as const,
@@ -355,5 +360,24 @@ export const getInvoiceSchema = (customerDatabaseId: string): CreateDatabasePara
   "Record Created": {
     "type": "created_time" as const,
     "created_time": {}
+  },
+  "Primary Charge": {
+    "type": "relation" as const,
+    "relation": {
+      "database_id": chargeDatabaseId,
+      "type": "dual_property" as const,
+      "dual_property": {}
+    }
+  },
+  "Primary Payment Intent": {
+    "type": "relation" as const,
+    "relation": {
+      "database_id": paymentIntentDatabaseId,
+      "type": "dual_property" as const,
+      "dual_property": {}
+    }
   }
-})
+  };
+
+  return properties;
+}
