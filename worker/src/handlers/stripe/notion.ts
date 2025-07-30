@@ -13,6 +13,7 @@ import { customerSchema } from "@/schemas/customer";
 import { getChargeSchema } from "@/schemas/charge";
 import { getInvoiceSchema } from "@/schemas/invoice";
 import { getSubscriptionSchema } from "@/schemas/subscription";
+import { getSubscriptionItemSchema } from "@/schemas/subscription-item";
 import { ensureAccountDo } from "@/utils/do";
 import { getCreditNoteSchema } from "@/schemas/credit-note";
 import { getDisputeSchema } from "@/schemas/dispute";
@@ -22,6 +23,8 @@ import { productSchema } from "@/schemas/product";
 import { getInvoiceLineItemSchema } from "@/schemas/invoice-line-item";
 import { getPromotionCodeSchema } from "@/schemas/promotion-code";
 import { getPaymentIntentSchema } from "@/schemas/payment-intent";
+import { getCouponSchema } from "@/schemas/coupon";
+import { getDiscountSchema } from "@/schemas/discount";
 
 export const getNotionLink = async (c: AppContext) => {
   const notionAuthLink = `${c.env.BASE_URL}/auth/signin?account_id=${c.get(
@@ -36,6 +39,9 @@ const resetNotionConnection = async (
   accountDo: DurableObjectStub<AccountDurableObject>
 ) => {
   await accountDo.clearNotionPages();
+  const doId = c.env.STRIPE_ENTITY_COORDINATOR.idFromName(stripeAccountId);
+  const coordinator = c.env.STRIPE_ENTITY_COORDINATOR.get(doId);
+  await coordinator.clearAllMappings();
 
   try {
     const token = await getNotionToken(c, stripeAccountId);
@@ -123,6 +129,9 @@ export const clearDatabaseLinks = async (c: AppContext) => {
   );
 
   await accountDo.clearNotionPages();
+  const doId = c.env.STRIPE_ENTITY_COORDINATOR.idFromName(stripeAccountId);
+  const coordinator = c.env.STRIPE_ENTITY_COORDINATOR.get(doId);
+  await coordinator.clearAllMappings();
 
   const resp: AccountStatus | null = await accountDo.getStatus();
   if (!resp) {
@@ -248,6 +257,13 @@ export const setUpDatabases = async (c: AppContext) => {
     )
   );
 
+  const subscriptionItemDb = await createDatabase(
+    notionToken,
+    parentPageId,
+    "Subscription Items",
+    getSubscriptionItemSchema(subscriptionDb.id, priceDb.id, productDb.id)
+  );
+
   const invoiceItemDb = await createDatabase(
     notionToken,
     parentPageId,
@@ -259,14 +275,41 @@ export const setUpDatabases = async (c: AppContext) => {
     notionToken,
     parentPageId,
     "Invoice Line Items",
-    getInvoiceLineItemSchema(invoicesDb.id, priceDb.id)
+    getInvoiceLineItemSchema(
+      invoicesDb.id,
+      priceDb.id,
+      subscriptionDb.id,
+      subscriptionItemDb.id,
+      invoiceItemDb.id
+    )
+  );
+
+  const couponsDb = await createDatabase(
+    notionToken,
+    parentPageId,
+    "Coupons",
+    getCouponSchema(productDb.id)
   );
 
   const promotionCodeDb = await createDatabase(
     notionToken,
     parentPageId,
     "Promotion Codes",
-    getPromotionCodeSchema(customersDb.id)
+    getPromotionCodeSchema(customersDb.id, couponsDb.id)
+  );
+
+  const discountDb = await createDatabase(
+    notionToken,
+    parentPageId,
+    "Discounts",
+    getDiscountSchema(
+      customersDb.id,
+      subscriptionDb.id,
+      invoicesDb.id,
+      invoiceItemDb.id,
+      promotionCodeDb.id,
+      couponsDb.id
+    )
   );
 
   const accountDo = await ensureAccountDo(
@@ -291,7 +334,13 @@ export const setUpDatabases = async (c: AppContext) => {
       product: { pageId: productDb.id, title: "Products" },
       promotion_code: { pageId: promotionCodeDb.id, title: "Promotion Codes" },
       subscription: { pageId: subscriptionDb.id, title: "Subscriptions" },
+      subscription_item: {
+        pageId: subscriptionItemDb.id,
+        title: "Subscription Items",
+      },
       payment_intent: { pageId: paymentIntentDb.id, title: "Payments" },
+      discount: { pageId: discountDb.id, title: "Discounts" },
+      coupon: { pageId: couponsDb.id, title: "Coupons" },
     },
   });
 

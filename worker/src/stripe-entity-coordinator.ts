@@ -1,39 +1,25 @@
 import { DurableObject } from "cloudflare:workers";
-import type { SupportedEntity } from "./types";
-import { findPageByTitle } from "./utils/notion-api";
+import type { DatabaseEntity } from "@/types";
+import { findPageByTitle } from "@/utils/notion-api";
 import type Stripe from "stripe";
+import { Databases } from "@/account-do";
 
 export interface EntityMapping {
   stripeId: string;
   notionPageId: string;
-  entityType: SupportedEntity;
+  entityType: DatabaseEntity;
   createdAt: number;
   updatedAt: number;
 }
 
 export interface CoordinatedUpsertOptions {
-  entityType: SupportedEntity;
+  entityType: DatabaseEntity;
   stripeId: string;
   notionToken: string;
   databaseId: string;
   titleProperty: string;
   upsertOperation: () => Promise<{ id: string; [key: string]: any }>;
   forceUpdate?: boolean; // If true, always run upsertOperation even if mapping exists
-}
-
-export interface DatabaseIds {
-  customerDatabaseId?: string;
-  chargeDatabaseId?: string;
-  invoiceDatabaseId?: string;
-  paymentIntentDatabaseId?: string;
-  productDatabaseId?: string;
-  priceDatabaseId?: string;
-  subscriptionDatabaseId?: string;
-  disputeDatabaseId?: string;
-  creditNoteDatabaseId?: string;
-  invoiceItemDatabaseId?: string;
-  lineItemDatabaseId?: string;
-  promotionCodeDatabaseId?: string;
 }
 
 export interface RelatedEntityIds {
@@ -49,6 +35,7 @@ export interface RelatedEntityIds {
   invoiceItemPageId: string | null;
   lineItemPageId: string | null;
   promotionCodePageId: string | null;
+  couponPageId: string | null;
 }
 
 export type StripeEntityUnion = 
@@ -59,11 +46,14 @@ export type StripeEntityUnion =
   | Stripe.Product 
   | Stripe.Price 
   | Stripe.Subscription 
+  | Stripe.SubscriptionItem
   | Stripe.Dispute 
   | Stripe.CreditNote 
   | Stripe.InvoiceItem 
   | Stripe.InvoiceLineItem 
-  | Stripe.PromotionCode;
+  | Stripe.PromotionCode
+  | Stripe.Coupon
+  | Stripe.Discount;
 
 export class StripeEntityCoordinator extends DurableObject {
   private inProgress = new Map<string, Promise<EntityMapping>>();
@@ -72,7 +62,7 @@ export class StripeEntityCoordinator extends DurableObject {
    * Get the entity mapping for a given Stripe entity
    */
   async getEntityMapping(
-    entityType: SupportedEntity, 
+    entityType: DatabaseEntity, 
     stripeId: string
   ): Promise<EntityMapping | null> {
     const key = this.getStorageKey(entityType, stripeId);
@@ -84,7 +74,7 @@ export class StripeEntityCoordinator extends DurableObject {
    * Store the entity mapping for a given Stripe entity
    */
   async setEntityMapping(
-    entityType: SupportedEntity,
+    entityType: DatabaseEntity,
     stripeId: string,
     notionPageId: string
   ): Promise<EntityMapping> {
@@ -108,7 +98,7 @@ export class StripeEntityCoordinator extends DurableObject {
    * Check if an entity mapping exists
    */
   async hasEntityMapping(
-    entityType: SupportedEntity,
+    entityType: DatabaseEntity,
     stripeId: string
   ): Promise<boolean> {
     const key = this.getStorageKey(entityType, stripeId);
@@ -175,7 +165,7 @@ export class StripeEntityCoordinator extends DurableObject {
   /**
    * Generate storage key for entity mapping
    */
-  private getStorageKey(entityType: SupportedEntity, stripeId: string): string {
+  private getStorageKey(entityType: DatabaseEntity, stripeId: string): string {
     return `entity:${entityType}:${stripeId}`;
   }
 
@@ -203,7 +193,7 @@ export class StripeEntityCoordinator extends DurableObject {
   /**
    * Delete a specific entity mapping
    */
-  async deleteEntityMapping(entityType: SupportedEntity, stripeId: string): Promise<void> {
+  async deleteEntityMapping(entityType: DatabaseEntity, stripeId: string): Promise<void> {
     const key = this.getStorageKey(entityType, stripeId);
     await this.ctx.storage.delete(key);
   }
@@ -214,7 +204,7 @@ export class StripeEntityCoordinator extends DurableObject {
    */
   async resolveRelatedEntityIds(
     notionToken: string,
-    databaseIds: DatabaseIds,
+    databaseIds: Databases,
     entity: StripeEntityUnion
   ): Promise<RelatedEntityIds> {
     const results: RelatedEntityIds = {
@@ -230,11 +220,12 @@ export class StripeEntityCoordinator extends DurableObject {
       invoiceItemPageId: null,
       lineItemPageId: null,
       promotionCodePageId: null,
+      couponPageId: null,
     };
 
     // Helper to resolve a single entity relationship
     const resolveEntity = async (
-      entityType: SupportedEntity,
+      entityType: DatabaseEntity,
       entityReference: string | { id?: string } | null | undefined,
       databaseId: string | undefined,
       titleProperty: string
@@ -270,7 +261,7 @@ export class StripeEntityCoordinator extends DurableObject {
       results.customerPageId = await resolveEntity(
         'customer',
         entity.customer,
-        databaseIds.customerDatabaseId,
+        databaseIds.customer.pageId,
         'Customer ID'
       );
     }
@@ -280,7 +271,7 @@ export class StripeEntityCoordinator extends DurableObject {
       results.chargePageId = await resolveEntity(
         'charge',
         entity.charge,
-        databaseIds.chargeDatabaseId,
+        databaseIds.charge.pageId,
         'Charge ID'
       );
     }
@@ -290,7 +281,7 @@ export class StripeEntityCoordinator extends DurableObject {
       results.invoicePageId = await resolveEntity(
         'invoice',
         entity.invoice,
-        databaseIds.invoiceDatabaseId,
+        databaseIds.invoice.pageId,
         'Invoice ID'
       );
     }
@@ -300,7 +291,7 @@ export class StripeEntityCoordinator extends DurableObject {
       results.paymentIntentPageId = await resolveEntity(
         'payment_intent',
         entity.payment_intent,
-        databaseIds.paymentIntentDatabaseId,
+        databaseIds.payment_intent.pageId,
         'Payment Intent ID'
       );
     }
@@ -310,7 +301,7 @@ export class StripeEntityCoordinator extends DurableObject {
       results.productPageId = await resolveEntity(
         'product',
         entity.product,
-        databaseIds.productDatabaseId,
+        databaseIds.product.pageId,
         'Product ID'
       );
     }
@@ -320,7 +311,7 @@ export class StripeEntityCoordinator extends DurableObject {
       results.pricePageId = await resolveEntity(
         'price',
         entity.price,
-        databaseIds.priceDatabaseId,
+        databaseIds.price.pageId,
         'Price ID'
       );
     }
@@ -330,7 +321,7 @@ export class StripeEntityCoordinator extends DurableObject {
       results.subscriptionPageId = await resolveEntity(
         'subscription',
         entity.subscription,
-        databaseIds.subscriptionDatabaseId,
+        databaseIds.subscription.pageId,
         'Subscription ID'
       );
     }
@@ -344,7 +335,7 @@ export class StripeEntityCoordinator extends DurableObject {
    */
   async getEntityPageId(
     notionToken: string,
-    entityType: SupportedEntity,
+    entityType: DatabaseEntity,
     stripeId: string,
     databaseId: string,
     titleProperty: string

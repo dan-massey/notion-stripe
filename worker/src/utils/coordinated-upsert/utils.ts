@@ -1,5 +1,5 @@
 import type { HandlerContext } from "@/handlers/stripe/webhook/shared/types";
-import type { SupportedEntity } from "@/types";
+import type { DatabaseEntity } from "@/types";
 
 /**
  * Get the coordinator instance for a Stripe account
@@ -16,7 +16,7 @@ export function getCoordinator(context: HandlerContext, stripeAccountId: string)
  */
 export async function getStoredNotionPageId(
   context: HandlerContext,
-  entityType: SupportedEntity,
+  entityType: DatabaseEntity,
   stripeId: string
 ): Promise<string | null> {
   const coordinator = getCoordinator(context, context.stripeAccountId);
@@ -29,7 +29,7 @@ export async function getStoredNotionPageId(
  */
 export async function hasEntityMapping(
   context: HandlerContext,
-  entityType: SupportedEntity,
+  entityType: DatabaseEntity,
   stripeId: string
 ): Promise<boolean> {
   const coordinator = getCoordinator(context, context.stripeAccountId);

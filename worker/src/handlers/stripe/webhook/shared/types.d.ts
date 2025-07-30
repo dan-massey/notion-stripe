@@ -6,7 +6,6 @@ export interface HandlerContext {
   stripe: Stripe;
   notionToken: string;
   stripeAccountId: string;
-  accountStatus: AccountStatus;
   account: DurableObjectStub<AccountDurableObject>;
   env: Env["Bindings"];
 }

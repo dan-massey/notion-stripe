@@ -68,7 +68,7 @@ export function stripeChargeToNotionProperties(
   }
 
   // Enhanced Payment Method with comprehensive details
-  let paymentMethodText = "";
+  const paymentMethodSummary = generatePaymentMethodSummary(charge);
   let paymentMethodType = "";
   let cardBrand = "";
   let cardLast4 = "";
@@ -77,32 +77,10 @@ export function stripeChargeToNotionProperties(
   let cardExpMonth: number | null = null;
   let cardExpYear: number | null = null;
 
-  if (charge.payment_method) {
-    if (typeof charge.payment_method === "string") {
-      paymentMethodText = charge.payment_method;
-    } else {
-      // Expanded payment method object
-      const pm = charge.payment_method as any; // Type assertion to handle expanded object
-      paymentMethodType = pm.type || "";
-      paymentMethodText = `${pm.type}: ${pm.id}`;
-
-      if (pm.card) {
-        cardBrand = pm.card.brand || "";
-        cardLast4 = pm.card.last4 || "";
-        cardFunding = pm.card.funding || "";
-        cardCountry = pm.card.country || "";
-        cardExpMonth = pm.card.exp_month || null;
-        cardExpYear = pm.card.exp_year || null;
-        paymentMethodText += ` (${pm.card.brand} ****${pm.card.last4})`;
-      }
-    }
-  }
-
-  // Use payment_method_details if payment_method isn't expanded
-  if (charge.payment_method_details && !paymentMethodText) {
+  // Extract individual fields for separate properties
+  if (charge.payment_method_details) {
     paymentMethodType = charge.payment_method_details.type;
-    paymentMethodText = `${charge.payment_method_details.type}`;
-
+    
     if (charge.payment_method_details.card) {
       const card = charge.payment_method_details.card;
       cardBrand = card.brand || "";
@@ -111,38 +89,10 @@ export function stripeChargeToNotionProperties(
       cardCountry = card.country || "";
       cardExpMonth = card.exp_month;
       cardExpYear = card.exp_year;
-      paymentMethodText += `: ${card.brand} ****${card.last4}`;
-
-      if (card.wallet) {
-        paymentMethodText += ` (${card.wallet.type})`;
-      }
-      if (card.funding) {
-        paymentMethodText += ` [${card.funding}]`;
-      }
-    } else if (charge.payment_method_details.us_bank_account) {
-      const bank = charge.payment_method_details.us_bank_account;
-      paymentMethodText += `: ${bank.bank_name} ****${bank.last4}`;
-      if (bank.account_type) {
-        paymentMethodText += ` [${bank.account_type}]`;
-      }
-    } else if (charge.payment_method_details.sepa_debit) {
-      const sepa = charge.payment_method_details.sepa_debit;
-      paymentMethodText += `: ****${sepa.last4}`;
-      if (sepa.country) {
-        paymentMethodText += ` [${sepa.country}]`;
-      }
-    } else if (charge.payment_method_details.paypal) {
-      const paypal = charge.payment_method_details.paypal;
-      paymentMethodText += `: ${
-        paypal.payer_email || paypal.payer_id || "PayPal"
-      }`;
-    } else if (charge.payment_method_details.cashapp) {
-      const cashapp = charge.payment_method_details.cashapp;
-      paymentMethodText += `: ${cashapp.cashtag || "Cash App"}`;
     }
   }
 
-  properties["Payment Method"] = createRichTextProperty(paymentMethodText);
+  properties["Payment Method"] = createRichTextProperty(paymentMethodSummary);
   properties["Payment Method Type"] = createSelectProperty(paymentMethodType);
   properties["Card Brand"] = createSelectProperty(cardBrand);
   properties["Card Last4"] = createRichTextProperty(cardLast4);

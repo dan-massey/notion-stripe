@@ -1,7 +1,7 @@
-import type { SupportedEntity } from "@/types";
+import type { StripeApiObject } from "@/types";
 import type { WorkflowParams } from "../types";
 
-export function determineEntityToBackfill(params: WorkflowParams): SupportedEntity | null {
+export function determineEntityToBackfill(params: WorkflowParams): StripeApiObject | null {
   return (
     params.entitiesToBackfill.find(
       (entityName) =>

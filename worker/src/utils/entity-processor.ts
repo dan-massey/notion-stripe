@@ -1,22 +1,9 @@
-import type { SupportedEntity } from "@/types";
+import type { DatabaseEntity } from "@/types";
 import type { HandlerContext } from "@/handlers/stripe/webhook/shared/types";
 import type { StripeEntityCoordinator } from "@/stripe-entity-coordinator";
-import type { AccountDurableObject } from "@/account-do";
-import type { DatabaseIds } from "@/workflow/types";
+import type { AccountDurableObject, Databases } from "@/account-do";
 import { Stripe } from "stripe";
-import {
-  coordinatedUpsertCustomer,
-  coordinatedUpsertProduct,
-  coordinatedUpsertCharge,
-  coordinatedUpsertPaymentIntent,
-  coordinatedUpsertInvoice,
-  coordinatedUpsertSubscription,
-  coordinatedUpsertCreditNote,
-  coordinatedUpsertDispute,
-  coordinatedUpsertInvoiceItem,
-  coordinatedUpsertPrice,
-  coordinatedUpsertPromotionCode
-} from "./coordinated-upsert";
+import { coordinatedUpsert } from "./coordinated-upsert";
 
 interface ProcessingContext {
   stripeAccountId: string;
@@ -45,9 +32,9 @@ export class EntityProcessor {
    * Process any supported entity type using the appropriate coordinated upsert function
    */
   async processEntity(
-    entityType: SupportedEntity,
+    entityType: DatabaseEntity,
     entityId: string,
-    databaseIds: DatabaseIds,
+    databases: Databases,
     options: ProcessingOptions = {}
   ): Promise<string | undefined> {
     // Create handler context that coordinated upsert functions expect
@@ -58,116 +45,24 @@ export class EntityProcessor {
       account: this.context.account || {} as DurableObjectStub<AccountDurableObject>,
       env: {
         STRIPE_ENTITY_COORDINATOR: this.context.coordinatorNamespace
-      } as HandlerContext['env'],
-      accountStatus: {} as HandlerContext['accountStatus']
+      } as HandlerContext['env']
     };
 
-    // Note: forceUpdate is now built into the coordinated upsert functions
-
-    switch (entityType) {
-      case "customer":
-        if (!databaseIds.customerDatabaseId) return undefined;
-        return coordinatedUpsertCustomer(
-          handlerContext,
-          entityId,
-          databaseIds.customerDatabaseId,
-        );
-
-      case "product":
-        if (!databaseIds.productDatabaseId) return undefined;
-        return coordinatedUpsertProduct(
-          handlerContext,
-          entityId,
-          databaseIds.productDatabaseId,
-        );
-
-      case "charge":
-        if (!databaseIds.chargeDatabaseId) return undefined;
-        return coordinatedUpsertCharge(
-          handlerContext,
-          entityId,
-          databaseIds.chargeDatabaseId,
-          databaseIds.customerDatabaseId,
-          databaseIds.paymentIntentDatabaseId,
-        );
-
-      case "payment_intent":
-        if (!databaseIds.paymentIntentDatabaseId) return undefined;
-        return coordinatedUpsertPaymentIntent(
-          handlerContext,
-          entityId,
-          databaseIds.paymentIntentDatabaseId,
-          databaseIds.customerDatabaseId,
-        );
-
-      case "invoice":
-        if (!databaseIds.invoiceDatabaseId) return undefined;
-        return coordinatedUpsertInvoice(
-          handlerContext,
-          entityId,
-          databaseIds.invoiceDatabaseId,
-          databaseIds.customerDatabaseId,
-          databaseIds.subscriptionDatabaseId,
-        );
-
-      case "subscription":
-        if (!databaseIds.subscriptionDatabaseId) return undefined;
-        return coordinatedUpsertSubscription(
-          handlerContext,
-          entityId,
-          databaseIds.subscriptionDatabaseId,
-          databaseIds.customerDatabaseId,
-        );
-
-      case "credit_note":
-        if (!databaseIds.creditNoteDatabaseId) return undefined;
-        return coordinatedUpsertCreditNote(
-          handlerContext,
-          entityId,
-          databaseIds.creditNoteDatabaseId,
-          databaseIds.customerDatabaseId,
-          databaseIds.invoiceDatabaseId,
-        );
-
-      case "dispute":
-        if (!databaseIds.disputeDatabaseId) return undefined;
-        return coordinatedUpsertDispute(
-          handlerContext,
-          entityId,
-          databaseIds.disputeDatabaseId,
-          databaseIds.chargeDatabaseId,
-        );
-
-      case "invoiceitem":
-        if (!databaseIds.invoiceItemDatabaseId) return undefined;
-        return coordinatedUpsertInvoiceItem(
-          handlerContext,
-          entityId,
-          databaseIds.invoiceItemDatabaseId,
-          databaseIds.customerDatabaseId,
-          databaseIds.invoiceDatabaseId
-        );
-
-      case "price":
-        if (!databaseIds.priceDatabaseId) return undefined;
-        return coordinatedUpsertPrice(
-          handlerContext,
-          entityId,
-          databaseIds.priceDatabaseId,
-          databaseIds.productDatabaseId,
-        );
-
-      case "promotion_code":
-        if (!databaseIds.promotionCodeDatabaseId) return undefined;
-        return coordinatedUpsertPromotionCode(
-          handlerContext,
-          entityId,
-          databaseIds.promotionCodeDatabaseId,
-        );
-
-      default:
-        throw new Error(`Unsupported entity type: ${entityType}`);
+    // Check if the main database for this entity exists
+    if (!databases[entityType].pageId) {
+      return undefined;
     }
+
+    // Build database IDs object - include all possible dependencies
+    const databaseIds: Record<string, string | undefined> = {};
+    for (const [key, db] of Object.entries(databases)) {
+      databaseIds[key] = db.pageId;
+    }
+
+    // Use the new generic coordinated upsert system
+    return coordinatedUpsert(handlerContext, entityType, entityId, {
+      databaseIds: databaseIds
+    });
   }
 
   /**

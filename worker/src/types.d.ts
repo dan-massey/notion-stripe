@@ -26,7 +26,10 @@ export type Env = {
 
 export type AppContext = HonoContext<Env>;
 
-export type SupportedEntities = [
+// Invoice line items are never going to arrive as webhook events,
+// but they are going to be stored in the database.
+
+export type DatabaseEntities = [
   "customer",
   "invoice",
   "charge",
@@ -34,13 +37,52 @@ export type SupportedEntities = [
   "credit_note",
   "dispute",
   "invoiceitem",
-  "line_item",
+  "subscription_item",
   "price",
   "product",
+  "coupon",
   "promotion_code",
-  "payment_intent"
+  "discount",
+  "payment_intent",
+  "line_item"
 ];
-export type SupportedEntity = SupportedEntities[number];
+
+export type DatabaseEntity = DatabaseEntities[number];
+
+export type StripeApiObjectKinds = [
+  "customer",
+  "invoice",
+  "charge",
+  "subscription",
+  "credit_note",
+  "dispute",
+  "invoiceitem",
+  "price",
+  "product",
+  "coupon",
+  "promotion_code",
+  "payment_intent",
+  "subscription_item"
+];
+
+export type StripeApiObject = StripeApiObjectKinds[number];
+
+export type ApiStripeObject =
+  | Stripe.Customer
+  | Stripe.Charge
+  | Stripe.CreditNote
+  | Stripe.Dispute
+  | Stripe.InvoiceItem
+  | Stripe.SubscriptionItem
+  | Stripe.Invoice
+  | Stripe.PaymentIntent
+  | Stripe.Price
+  | Stripe.Product
+  | Stripe.PromotionCode
+  | Stripe.Coupon
+  | Stripe.Subscription;
+
+export type DatabaseStripeObject = ApiStripeObject | Stripe.InvoiceLineItem;
 
 export type BackfillWorkflowStatus = {
   startedAt: number;

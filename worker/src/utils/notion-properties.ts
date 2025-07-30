@@ -48,18 +48,6 @@ export function createDateProperty(timestamp: number | null | undefined): any {
   };
 }
 
-export function createDateTimeProperty(
-  timestamp: number | null | undefined
-): any {
-  if (!timestamp) return { date: null };
-
-  return {
-    date: {
-      start: new Date(timestamp * 1000).toISOString(),
-    },
-  };
-}
-
 export function createPhoneProperty(
   phoneNumber: string | null | undefined
 ): any {

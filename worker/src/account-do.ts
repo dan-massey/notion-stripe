@@ -2,9 +2,28 @@ import { DurableObject } from "cloudflare:workers";
 import type {
   StripeMode,
   Env,
-  SupportedEntities,
-  SupportedEntity,
+  DatabaseEntities,
+  DatabaseEntity,
 } from "@/types";
+
+const DATABASES: DatabaseEntities = [
+  "customer",
+  "invoice",
+  "charge",
+  "subscription",
+  "credit_note",
+  "dispute",
+  "invoiceitem",
+  "subscription_item",
+  "price",
+  "product",
+  "coupon",
+  "promotion_code",
+  "discount",
+  "payment_intent",
+  "line_item"
+];
+
 
 type SubscriptionStatus = {
   stripeSubscriptionStatus?: string | null;
@@ -14,29 +33,14 @@ type SubscriptionStatus = {
   cancelAt?: number | null;
 };
 
-const ENTITIES: SupportedEntities = [
-  "customer",
-  "invoice",
-  "charge",
-  "subscription",
-  "credit_note",
-  "dispute",
-  "invoiceitem",
-  "line_item",
-  "price",
-  "product",
-  "promotion_code",
-  "payment_intent"
-] as const;
-
 type Database = {
   lastError?: string | null | undefined;
   pageId: string | undefined;
   title: string | undefined;
 };
 
-type Databases = {
-  [K in SupportedEntity]: Database;
+export type Databases = {
+  [K in DatabaseEntity]: Database;
 };
 
 type NotionConnection = {
@@ -76,7 +80,7 @@ export class AccountDurableObject extends DurableObject<Env> {
       };
     }
     if (!this.accountStatus.notionConnection.databases) {
-      this.accountStatus.notionConnection.databases = ENTITIES.reduce(
+      this.accountStatus.notionConnection.databases = DATABASES.reduce(
         (acc, entity) => {
           acc[entity] = { pageId: undefined, lastError: null, title: undefined };
           return acc;
@@ -104,7 +108,7 @@ export class AccountDurableObject extends DurableObject<Env> {
     return this.accountStatus.subscription;
   }
 
-  getDbForEntity(entity: SupportedEntity) {
+  getDbForEntity(entity: DatabaseEntity) {
     return this.databases[entity];
   }
 
@@ -232,12 +236,14 @@ export class AccountDurableObject extends DurableObject<Env> {
     ) {
       return;
     }
+    
+    // Clear the account's notion connection data
     this.accountStatus.notionConnection = null;
     await this.saveState();
   }
 
   async setEntityError(
-    entity: SupportedEntity,
+    entity: DatabaseEntity,
     value: string | null
   ): Promise<AccountStatus | null> {
     if (!this.accountStatus) {

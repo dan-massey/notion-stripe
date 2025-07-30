@@ -1,114 +1,37 @@
 import type {
   CreateDatabaseParameters
 } from "@notionhq/client/build/src/api-endpoints";
+import {
+  titleProperty,
+  richTextProperty,
+  checkboxProperty,
+  urlProperty,
+  dateProperty,
+  numberProperty,
+  createMetadataFields
+} from "./utils";
 
 export const productSchema: CreateDatabaseParameters["properties"] = {
-  "Product ID": {
-    "type": "title" as const,
-    "title": {}
-  },
-  "Name": {
-    "type": "rich_text" as const,
-    "rich_text": {}
-  },
-  "Active": {
-    "type": "checkbox" as const,
-    "checkbox": {}
-  },
-  "Description": {
-    "type": "rich_text" as const,
-    "rich_text": {}
-  },
-  "Default Price": {
-    "type": "rich_text" as const,
-    "rich_text": {}
-  },
-  "Statement Descriptor": {
-    "type": "rich_text" as const,
-    "rich_text": {}
-  },
-  "Unit Label": {
-    "type": "rich_text" as const,
-    "rich_text": {}
-  },
-  "Tax Code": {
-    "type": "rich_text" as const,
-    "rich_text": {}
-  },
-  "URL": {
-    "type": "url" as const,
-    "url": {}
-  },
-  "Shippable": {
-    "type": "checkbox" as const,
-    "checkbox": {}
-  },
-  "Live Mode": {
-    "type": "checkbox" as const,
-    "checkbox": {}
-  },
-  "Created Date": {
-    "type": "date" as const,
-    "date": {}
-  },
-  "Updated Date": {
-    "type": "date" as const,
-    "date": {}
-  },
-  "Images Count": {
-    "type": "number" as const,
-    "number": {
-      "format": "number" as const
-    }
-  },
-  "Images URLs": {
-    "type": "rich_text" as const,
-    "rich_text": {}
-  },
-  "Marketing Features Count": {
-    "type": "number" as const,
-    "number": {
-      "format": "number" as const
-    }
-  },
-  "Marketing Features": {
-    "type": "rich_text" as const,
-    "rich_text": {}
-  },
-  "Package Height": {
-    "type": "number" as const,
-    "number": {
-      "format": "number" as const
-    }
-  },
-  "Package Length": {
-    "type": "number" as const,
-    "number": {
-      "format": "number" as const
-    }
-  },
-  "Package Width": {
-    "type": "number" as const,
-    "number": {
-      "format": "number" as const
-    }
-  },
-  "Package Weight": {
-    "type": "number" as const,
-    "number": {
-      "format": "number" as const
-    }
-  },
-  "Metadata": {
-    "type": "rich_text" as const,
-    "rich_text": {}
-  },
-  "Last Updated": {
-    "type": "last_edited_time" as const,
-    "last_edited_time": {}
-  },
-  "Record Created": {
-    "type": "created_time" as const,
-    "created_time": {}
-  }
+  "Product ID": titleProperty(),
+  "Name": richTextProperty(),
+  "Active": checkboxProperty(),
+  "Description": richTextProperty(),
+  "Default Price": richTextProperty(),
+  "Statement Descriptor": richTextProperty(),
+  "Unit Label": richTextProperty(),
+  "Tax Code": richTextProperty(),
+  "URL": urlProperty(),
+  "Shippable": checkboxProperty(),
+  "Live Mode": checkboxProperty(),
+  "Created Date": dateProperty(),
+  "Updated Date": dateProperty(),
+  "Images Count": numberProperty(),
+  "Images URLs": richTextProperty(),
+  "Marketing Features Count": numberProperty(),
+  "Marketing Features": richTextProperty(),
+  "Package Height": numberProperty(),
+  "Package Length": numberProperty(),
+  "Package Width": numberProperty(),
+  "Package Weight": numberProperty(),
+  ...createMetadataFields()
 };

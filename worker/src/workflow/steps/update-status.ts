@@ -1,6 +1,5 @@
 import { getStatus, setStatus } from "@/utils/backfill-status";
-import type { StripeMode, SupportedEntity } from "@/types";
-import type { WorkflowParams } from "../types";
+import type { StripeMode, StripeApiObject } from "@/types";
 
 export async function markCompleted(
   backfillKv: KVNamespace,
@@ -25,7 +24,7 @@ export async function updateProgress(
   stripeMode: StripeMode,
   stripeAccountId: string,
   entitiesProcessed: number,
-  mostRecentEntity: SupportedEntity,
+  mostRecentEntity: StripeApiObject,
 ): Promise<void> {
   const status = await getStatus(backfillKv, stripeMode, stripeAccountId);
   if (!status) {

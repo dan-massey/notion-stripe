@@ -1,5 +1,2 @@
-// Re-export all coordinated upsert functions for backward compatibility
-export * from './core-entities';
-export * from './payment-entities';
-export * from './billing-entities'; 
-export * from './utils';
+// Export the new generic coordinated upsert system
+export { coordinatedUpsert, coordinatedUpsertLineItem, coordinatedUpsertDiscount } from "./generic-upsert";

@@ -1,19 +1,21 @@
-import type { AppContext, SupportedEntity, BackfillTaskStatus } from "@/types";
+import type { AppContext, StripeApiObject, BackfillTaskStatus } from "@/types";
 import { getStatus, setStatus } from "@/utils/backfill-status";
+import { WorkflowParams } from "@/workflow/types";
 
 export const startBackfill = async (c: AppContext) => {
-  const entities: SupportedEntity[] = [
+  const entities: Array<StripeApiObject> = [
     "customer",
-    "payment_intent",
-    "charge",
     "invoice",
+    "charge",
+    "subscription",
     "credit_note",
     "dispute",
-    "product",
-    "price",
-    "subscription",
     "invoiceitem",
+    "price",
+    "product",
+    "coupon",
     "promotion_code",
+    "payment_intent"
   ];
 
   const statuses = Object.fromEntries(
@@ -25,16 +27,27 @@ export const startBackfill = async (c: AppContext) => {
         startingAfter: undefined,
       },
     ])
-  );
+  ) as Record<StripeApiObject, BackfillTaskStatus>;
+
+  const stripeAccountId = c.get("stripeAccountId");
+  const stripeMode = c.get("stripeMode");
+
+  if (!stripeAccountId || ! stripeMode) {
+    return c.json({message: "Failed to start backfill"});
+  }
+
+  const params: WorkflowParams = {
+    stripeAccountId: stripeAccountId,
+    stripeMode: stripeMode,
+    entitiesToBackfill: entities,
+    entitiesProcessed: 0,
+    entityStatus: statuses,
+    firstWorkflowId: null,
+    mostRecentWorkflowId: null
+  };
 
   await c.env.BACKFILL_WORKFLOW.create({
-    params: {
-      stripeAccountId: c.get("stripeAccountId"),
-      stripeMode: c.get("stripeMode"),
-      entitiesToBackfill: entities,
-      entitiesProcessed: 0,
-      entityStatus: statuses,
-    },
+    params: params,
   });
   const status = {
     recordsProcessed: 0,

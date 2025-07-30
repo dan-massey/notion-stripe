@@ -57,7 +57,7 @@
     {
       "name": "backfill-workflow",
       "binding": "BACKFILL_WORKFLOW",
-      "class_name": "BackfillWorkflow"
+      "class_name": "DependencyAwareBackfillWorkflow"
     }
   ],
   "kv_namespaces": [

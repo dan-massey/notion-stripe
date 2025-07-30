@@ -1,6 +1,6 @@
 {
   "id": "com.massey-consulting.notion-sync",
-  "version": "0.0.35",
+  "version": "0.0.36",
   "name": "Sync to DB - A Notion integration",
   "icon": "",
   "permissions": [
@@ -55,6 +55,10 @@
     {
       "permission": "promotion_code_read",
       "purpose": "Read promotion codes"
+    },
+    {
+      "permission": "coupon_read",
+      "purpose": "Read coupons"
     }
   ],
   "connect_permissions": null,

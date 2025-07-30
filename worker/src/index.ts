@@ -61,5 +61,5 @@ app.post(
 
 export default app;
 export { AccountDurableObject } from "./account-do";
-export { BackfillWorkflow } from "./workflow";
 export { StripeEntityCoordinator } from "./stripe-entity-coordinator";
+export { DependencyAwareBackfillWorkflow } from "./workflow/dependency-aware-backfill";

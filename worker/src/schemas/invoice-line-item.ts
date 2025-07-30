@@ -1,167 +1,56 @@
 import type {
   CreateDatabaseParameters
 } from "@notionhq/client/build/src/api-endpoints";
+import {
+  titleProperty,
+  relationProperty,
+  selectProperty,
+  numberProperty,
+  richTextProperty,
+  checkboxProperty,
+  dateProperty,
+  createMetadataFields
+} from "./utils";
 
-export const getInvoiceLineItemSchema = (invoiceDatabaseId: string, priceDatabaseId?: string): CreateDatabaseParameters["properties"] => {
-  const baseProperties: CreateDatabaseParameters["properties"] = {
-    "Line Item ID": {
-      "type": "title" as const,
-      "title": {}
-    },
-    "Invoice": {
-      "type": "relation" as const,
-      "relation": {
-        "database_id": invoiceDatabaseId,
-        "type": "dual_property" as const,
-        "dual_property": {}
-      }
-    },
-    "Type": {
-      "type": "select" as const,
-      "select": {
-        "options": [
-          {"name": "invoiceitem", "color": "blue" as const},
-          {"name": "subscription", "color": "green" as const}
-        ]
-      }
-    },
-    "Amount": {
-      "type": "number" as const,
-      "number": {
-        "format": "number" as const
-      }
-    },
-    "Amount Excluding Tax": {
-      "type": "number" as const,
-      "number": {
-        "format": "number" as const
-      }
-    },
-    "Currency": {
-      "type": "rich_text" as const,
-      "rich_text": {}
-    },
-    "Description": {
-      "type": "rich_text" as const,
-      "rich_text": {}
-    },
-    "Discountable": {
-      "type": "checkbox" as const,
-      "checkbox": {}
-    },
-    "Live Mode": {
-      "type": "checkbox" as const,
-      "checkbox": {}
-    },
-    "Proration": {
-      "type": "checkbox" as const,
-      "checkbox": {}
-    },
-    "Quantity": {
-      "type": "number" as const,
-      "number": {
-        "format": "number" as const
-      }
-    },
-    "Subscription": {
-      "type": "rich_text" as const,
-      "rich_text": {}
-    },
-    "Subscription Item": {
-      "type": "rich_text" as const,
-      "rich_text": {}
-    },
-    "Unit Amount Excluding Tax": {
-      "type": "rich_text" as const,
-      "rich_text": {}
-    },
-    "Invoice Item": {
-      "type": "rich_text" as const,
-      "rich_text": {}
-    },
-    "Period Start": {
-      "type": "date" as const,
-      "date": {}
-    },
-    "Period End": {
-      "type": "date" as const,
-      "date": {}
-    },
-    "Proration Details Credited Items Count": {
-      "type": "number" as const,
-      "number": {
-        "format": "number" as const
-      }
-    },
-    "Proration Details": {
-      "type": "rich_text" as const,
-      "rich_text": {}
-    },
-    "Tax Amounts Count": {
-      "type": "number" as const,
-      "number": {
-        "format": "number" as const
-      }
-    },
-    "Tax Amounts": {
-      "type": "rich_text" as const,
-      "rich_text": {}
-    },
-    "Tax Rates Count": {
-      "type": "number" as const,
-      "number": {
-        "format": "number" as const
-      }
-    },
-    "Tax Rates": {
-      "type": "rich_text" as const,
-      "rich_text": {}
-    },
-    "Discount Amounts Count": {
-      "type": "number" as const,
-      "number": {
-        "format": "number" as const
-      }
-    },
-    "Discount Amounts": {
-      "type": "rich_text" as const,
-      "rich_text": {}
-    },
-    "Discounts Count": {
-      "type": "number" as const,
-      "number": {
-        "format": "number" as const
-      }
-    },
-    "Discounts": {
-      "type": "rich_text" as const,
-      "rich_text": {}
-    },
-    "Metadata": {
-      "type": "rich_text" as const,
-      "rich_text": {}
-    },
-    "Last Updated": {
-      "type": "last_edited_time" as const,
-      "last_edited_time": {}
-    },
-    "Record Created": {
-      "type": "created_time" as const,
-      "created_time": {}
-    }
+export const getInvoiceLineItemSchema = (
+  invoiceDatabaseId: string, 
+  priceDatabaseId: string,
+  subscriptionDatabaseId: string,
+  subscriptionItemDatabaseId: string,
+  invoiceItemDatabaseId: string
+): CreateDatabaseParameters["properties"] => {
+  return {
+    "Line Item ID": titleProperty(),
+    "Invoice": relationProperty(invoiceDatabaseId),
+    "Price": relationProperty(priceDatabaseId),
+    "Parent Type": selectProperty([
+      {name: "invoice_item_details", color: "blue" as const},
+      {name: "subscription_item_details", color: "green" as const}
+    ]),
+    "Amount": numberProperty(),
+    "Amount Excluding Tax": numberProperty(),
+    "Currency": richTextProperty(),
+    "Description": richTextProperty(),
+    "Discountable": checkboxProperty(),
+    "Live Mode": checkboxProperty(),
+    "Proration": checkboxProperty(),
+    "Quantity": numberProperty(),
+    "Subscription": relationProperty(subscriptionDatabaseId),
+    "Subscription Item": relationProperty(subscriptionItemDatabaseId),
+    "Unit Amount Excluding Tax": richTextProperty(),
+    "Invoice Item": relationProperty(invoiceItemDatabaseId),
+    "Period Start": dateProperty(),
+    "Period End": dateProperty(),
+    "Proration Details Credited Items Count": numberProperty(),
+    "Proration Details": richTextProperty(),
+    "Tax Amounts Count": numberProperty(),
+    "Tax Amounts": richTextProperty(),
+    "Tax Rates Count": numberProperty(),
+    "Tax Rates": richTextProperty(),
+    "Discount Amounts Count": numberProperty(),
+    "Discount Amounts": richTextProperty(),
+    "Discounts Count": numberProperty(),
+    "Discounts": richTextProperty(),
+    ...createMetadataFields()
   };
-
-  // Add price relation only if priceDatabaseId is provided
-  if (priceDatabaseId) {
-    baseProperties["Price"] = {
-      "type": "relation" as const,
-      "relation": {
-        "database_id": priceDatabaseId,
-        "type": "dual_property" as const,
-        "dual_property": {}
-      }
-    };
-  }
-
-  return baseProperties;
 };
