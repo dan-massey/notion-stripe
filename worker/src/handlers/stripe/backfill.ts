@@ -1,6 +1,6 @@
 import type { AppContext, StripeApiObject, BackfillTaskStatus } from "@/types";
 import { getStatus, setStatus } from "@/utils/backfill-status";
-import { WorkflowParams } from "@/backfill-workflow/types";
+import { WorkflowParams } from "@/workflows/backfill-workflow/types";
 
 export const startBackfill = async (c: AppContext) => {
   const entities: Array<StripeApiObject> = [

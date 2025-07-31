@@ -12,10 +12,10 @@ import type {
 } from "@/types";
 import { Stripe } from "stripe";
 import { EntityProcessor } from "@/entity-processor/entity-processor-refactored";
-import { getNotionToken } from "@/workflow-utils/get-notion-token";
-import { getAccountStub } from "@/workflow-utils/get-account-stub";
+import { getNotionToken } from "@/workflows/utils/get-notion-token";
+import { getAccountStub } from "@/workflows/utils/get-account-stub";
 import { Databases } from "@/durable-objects/account-do";
-import { getStripe } from "@/workflow-utils/get-stripe";
+import { getStripe } from "@/workflows/utils/get-stripe";
 
 const WEBHOOK_OBJECT_KINDS: StripeApiObjectKinds = [
   "customer",

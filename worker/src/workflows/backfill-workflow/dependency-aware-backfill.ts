@@ -9,16 +9,16 @@ import type { WorkflowParams } from "./types";
 
 // Import step functions
 import { determineEntityToBackfill } from "./steps/determine-entity";
-import { getNotionToken } from "../workflow-utils/get-notion-token";
+import { getNotionToken } from "../utils/get-notion-token";
 import { getDatabaseIds } from "./steps/get-database-ids";
 import { markCompleted, updateProgress } from "./steps/update-status";
 import { getNextEntityFromStripe } from "./steps/process-entity-with-dependencies";
 
 // Import entity processing logic
 import { EntityProcessor } from "@/entity-processor/entity-processor-refactored";
-import { getAccountStub } from "@/workflow-utils/get-account-stub";
-import { getStripe } from "@/workflow-utils/get-stripe";
-import { getDatabaseMap } from "@/workflow-utils/get-database-map";
+import { getAccountStub } from "@/workflows/utils/get-account-stub";
+import { getStripe } from "@/workflows/utils/get-stripe";
+import { getDatabaseMap } from "@/workflows/utils/get-database-map";
 
 export class DependencyAwareBackfillWorkflow extends WorkflowEntrypoint<
   CloudflareBindings,

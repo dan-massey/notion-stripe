@@ -2,7 +2,7 @@ import type {
   AppContext,
   StripeMode,
 } from "@/types";
-import type { WorkflowParams } from "@/webhook-workflow";
+import type { WorkflowParams } from "@/workflows/webhook-workflow";
 import { ensureAccountDo } from "@/durable-objects/utils";
 import { getNotionToken } from "@/utils/stripe";
 
