@@ -2,7 +2,6 @@ import { DurableObject } from "cloudflare:workers";
 import type { DatabaseEntity } from "@/types";
 import { findPageByTitle } from "@/utils/notion-api";
 import type Stripe from "stripe";
-import { Databases } from "@/durable-objects/account-do";
 
 export interface EntityMapping {
   stripeId: string;
@@ -61,7 +60,7 @@ export class StripeEntityCoordinator extends DurableObject {
   /**
    * Get the entity mapping for a given Stripe entity
    */
-  async getEntityMapping(
+  private async getEntityMapping(
     entityType: DatabaseEntity, 
     stripeId: string
   ): Promise<EntityMapping | null> {
@@ -73,7 +72,7 @@ export class StripeEntityCoordinator extends DurableObject {
   /**
    * Store the entity mapping for a given Stripe entity
    */
-  async setEntityMapping(
+  private async setEntityMapping(
     entityType: DatabaseEntity,
     stripeId: string,
     notionPageId: string
@@ -97,7 +96,7 @@ export class StripeEntityCoordinator extends DurableObject {
   /**
    * Check if an entity mapping exists
    */
-  async hasEntityMapping(
+  private async hasEntityMapping(
     entityType: DatabaseEntity,
     stripeId: string
   ): Promise<boolean> {
@@ -172,7 +171,7 @@ export class StripeEntityCoordinator extends DurableObject {
   /**
    * Get all entity mappings (for debugging/administration)
    */
-  async getAllMappings(): Promise<EntityMapping[]> {
+  private async getAllMappings(): Promise<EntityMapping[]> {
     const mappings: EntityMapping[] = [];
     const list = await this.ctx.storage.list({ prefix: 'entity:' });
     
@@ -193,147 +192,16 @@ export class StripeEntityCoordinator extends DurableObject {
   /**
    * Delete a specific entity mapping
    */
-  async deleteEntityMapping(entityType: DatabaseEntity, stripeId: string): Promise<void> {
+  private async deleteEntityMapping(entityType: DatabaseEntity, stripeId: string): Promise<void> {
     const key = this.getStorageKey(entityType, stripeId);
     await this.ctx.storage.delete(key);
-  }
-
-  /**
-   * Resolve related entity page IDs for a given Stripe entity
-   * This centralizes the logic for finding related entity Notion page IDs
-   */
-  async resolveRelatedEntityIds(
-    notionToken: string,
-    databaseIds: Databases,
-    entity: StripeEntityUnion
-  ): Promise<RelatedEntityIds> {
-    const results: RelatedEntityIds = {
-      customerPageId: null,
-      chargePageId: null,
-      invoicePageId: null,
-      paymentIntentPageId: null,
-      productPageId: null,
-      pricePageId: null,
-      subscriptionPageId: null,
-      disputePageId: null,
-      creditNotePageId: null,
-      invoiceItemPageId: null,
-      lineItemPageId: null,
-      promotionCodePageId: null,
-      couponPageId: null,
-    };
-
-    // Helper to resolve a single entity relationship
-    const resolveEntity = async (
-      entityType: DatabaseEntity,
-      entityReference: string | { id?: string } | null | undefined,
-      databaseId: string | undefined,
-      titleProperty: string
-    ): Promise<string | null> => {
-      if (!databaseId || !entityReference) return null;
-      
-      const stripeId = typeof entityReference === 'string' ? entityReference : entityReference.id;
-      if (!stripeId) return null;
-
-      // First check if we have a cached mapping
-      const existingMapping = await this.getEntityMapping(entityType, stripeId);
-      if (existingMapping) {
-        return existingMapping.notionPageId;
-      }
-
-      // Fall back to findPageByTitle (slower but handles entities not yet cached)
-      try {
-        const page = await findPageByTitle(notionToken, databaseId, titleProperty, stripeId);
-        if (page?.id) {
-          // Cache the result for future use
-          await this.setEntityMapping(entityType, stripeId, page.id);
-          return page.id;
-        }
-      } catch (error) {
-        console.warn(`Failed to resolve ${entityType} ${stripeId}:`, error);
-      }
-      
-      return null;
-    };
-
-    // Resolve customer relationship
-    if ('customer' in entity && entity.customer) {
-      results.customerPageId = await resolveEntity(
-        'customer',
-        entity.customer,
-        databaseIds.customer.pageId,
-        'Customer ID'
-      );
-    }
-
-    // Resolve charge relationship
-    if ('charge' in entity && entity.charge) {
-      results.chargePageId = await resolveEntity(
-        'charge',
-        entity.charge,
-        databaseIds.charge.pageId,
-        'Charge ID'
-      );
-    }
-
-    // Resolve invoice relationship
-    if ('invoice' in entity && entity.invoice) {
-      results.invoicePageId = await resolveEntity(
-        'invoice',
-        entity.invoice,
-        databaseIds.invoice.pageId,
-        'Invoice ID'
-      );
-    }
-
-    // Resolve payment intent relationship
-    if ('payment_intent' in entity && entity.payment_intent) {
-      results.paymentIntentPageId = await resolveEntity(
-        'payment_intent',
-        entity.payment_intent,
-        databaseIds.payment_intent.pageId,
-        'Payment Intent ID'
-      );
-    }
-
-    // Resolve product relationship
-    if ('product' in entity && entity.product) {
-      results.productPageId = await resolveEntity(
-        'product',
-        entity.product,
-        databaseIds.product.pageId,
-        'Product ID'
-      );
-    }
-
-    // Resolve price relationship
-    if ('price' in entity && entity.price) {
-      results.pricePageId = await resolveEntity(
-        'price',
-        entity.price,
-        databaseIds.price.pageId,
-        'Price ID'
-      );
-    }
-
-    // Resolve subscription relationship
-    if ('subscription' in entity && entity.subscription) {
-      results.subscriptionPageId = await resolveEntity(
-        'subscription',
-        entity.subscription,
-        databaseIds.subscription.pageId,
-        'Subscription ID'
-      );
-    }
-
-    return results;
   }
 
   /**
    * Get the Notion page ID for a Stripe entity, using cache when possible
    * This is a convenience method for single entity lookups
    */
-  async getEntityPageId(
+  private async getEntityPageId(
     notionToken: string,
     entityType: DatabaseEntity,
     stripeId: string,
