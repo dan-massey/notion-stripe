@@ -5,6 +5,16 @@ import { getCoordinator } from "./utils";
 import { upsertPageByTitle } from "@/utils/notion-api";
 import type { CreatePageParameters } from "@notionhq/client/build/src/api-endpoints";
 
+async function hashObject(input: any): Promise<string> {
+    const encoder = new TextEncoder();
+    const data = encoder.encode(JSON.stringify(input));
+    const hashBuffer = await crypto.subtle.digest("SHA-256", data);
+    return Array.from(new Uint8Array(hashBuffer))
+      .map((b) => b.toString(16).padStart(2, "0"))
+      .join("");
+  }
+
+
 /**
  * Simple coordinated upsert function for any entity type
  * Only handles coordination and database writes - no dependency resolution or entity processing
@@ -14,7 +24,8 @@ export async function coordinatedUpsert<K extends DatabaseEntity>(
   entityType: K,
   stripeId: string,
   databaseId: string,
-  notionProperties: NonNullable<CreatePageParameters['properties']>
+  notionProperties: NonNullable<CreatePageParameters['properties']>,
+  forceUpdate = false,
 ): Promise<string | undefined> {
   console.log(`🔄 Starting coordinatedUpsert for ${entityType} ${stripeId}`);
   
@@ -27,6 +38,8 @@ export async function coordinatedUpsert<K extends DatabaseEntity>(
 
   const coordinator = getCoordinator(context, context.stripeAccountId);
 
+  const propertyHash = await hashObject(notionProperties);
+
   try {
     const mapping = await coordinator.coordinatedUpsert({
       entityType: entityType,
@@ -34,7 +47,8 @@ export async function coordinatedUpsert<K extends DatabaseEntity>(
       notionToken: context.notionToken,
       databaseId: databaseId,
       titleProperty: config.titleProperty,
-      forceUpdate: true,
+      forceUpdate: forceUpdate,
+      updateHash: propertyHash,
       upsertOperation: async () => {
         console.log(`💾 Upserting ${entityType} ${stripeId} to Notion database ${databaseId}`);
         const result = await upsertPageByTitle(

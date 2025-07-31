@@ -1,4 +1,13 @@
-import type { EntityConfigRegistry, StripeTypeMap } from "@/entity-processor/entity-config";
+import type {
+  EntityConfigRegistry,
+  StripeTypeMap,
+} from "@/entity-processor/entity-config";
+import type { HandlerContext } from "@/handlers/stripe/webhook/shared/types";
+import {
+  InvoiceLineItemProcessor,
+  SubscriptionItemProcessor,
+} from "./services";
+import type { DependencyProcessor } from "./services/dependency-processor";
 
 // Import converters
 import { stripeCustomerToNotionProperties } from "@/converters/customer";
@@ -41,9 +50,13 @@ export const ENTITY_REGISTRY: EntityConfigRegistry = {
     dependencies: [],
     titleProperty: "Customer ID",
     retrieveFromStripe: async (context, stripeId) => {
-      const customer = await context.stripe.customers.retrieve(stripeId, {
-        expand: ENTITY_REGISTRY.customer.stripeExpansions,
-      }, { stripeAccount: context.stripeAccountId });
+      const customer = await context.stripe.customers.retrieve(
+        stripeId,
+        {
+          expand: ENTITY_REGISTRY.customer.stripeExpansions,
+        },
+        { stripeAccount: context.stripeAccountId }
+      );
       if (customer.deleted) {
         throw new Error(`Customer ${stripeId} has been deleted.`);
       }
@@ -60,7 +73,11 @@ export const ENTITY_REGISTRY: EntityConfigRegistry = {
     dependencies: [],
     titleProperty: "Product ID",
     retrieveFromStripe: (context, stripeId) => {
-      return context.stripe.products.retrieve(stripeId, {}, { stripeAccount: context.stripeAccountId });
+      return context.stripe.products.retrieve(
+        stripeId,
+        {},
+        { stripeAccount: context.stripeAccountId }
+      );
     },
     convertToNotionProperties: (expandedEntity, dependencyPageIds) => {
       return stripeProductToNotionProperties(expandedEntity);
@@ -73,7 +90,11 @@ export const ENTITY_REGISTRY: EntityConfigRegistry = {
     dependencies: [],
     titleProperty: "Coupon ID",
     retrieveFromStripe: (context, stripeId) => {
-      return context.stripe.coupons.retrieve(stripeId, {}, { stripeAccount: context.stripeAccountId });
+      return context.stripe.coupons.retrieve(
+        stripeId,
+        {},
+        { stripeAccount: context.stripeAccountId }
+      );
     },
     convertToNotionProperties: (expandedEntity, dependencyPageIds) => {
       return stripeCouponToNotionProperties(expandedEntity);
@@ -94,9 +115,13 @@ export const ENTITY_REGISTRY: EntityConfigRegistry = {
     ],
     titleProperty: "Payment Intent ID",
     retrieveFromStripe: (context, stripeId) => {
-      return context.stripe.paymentIntents.retrieve(stripeId, {
-        expand: ENTITY_REGISTRY.payment_intent.stripeExpansions,
-      }, { stripeAccount: context.stripeAccountId });
+      return context.stripe.paymentIntents.retrieve(
+        stripeId,
+        {
+          expand: ENTITY_REGISTRY.payment_intent.stripeExpansions,
+        },
+        { stripeAccount: context.stripeAccountId }
+      );
     },
     convertToNotionProperties: (expandedEntity, dependencyPageIds) => {
       return stripePaymentIntentToNotionProperties(
@@ -119,9 +144,13 @@ export const ENTITY_REGISTRY: EntityConfigRegistry = {
     ],
     titleProperty: "Price ID",
     retrieveFromStripe: (context, stripeId) => {
-      return context.stripe.prices.retrieve(stripeId, {
-        expand: ENTITY_REGISTRY.price.stripeExpansions,
-      }, { stripeAccount: context.stripeAccountId });
+      return context.stripe.prices.retrieve(
+        stripeId,
+        {
+          expand: ENTITY_REGISTRY.price.stripeExpansions,
+        },
+        { stripeAccount: context.stripeAccountId }
+      );
     },
     convertToNotionProperties: (expandedEntity, dependencyPageIds) => {
       return stripePriceToNotionProperties(
@@ -150,9 +179,13 @@ export const ENTITY_REGISTRY: EntityConfigRegistry = {
     ],
     titleProperty: "Promotion Code ID",
     retrieveFromStripe: (context, stripeId) => {
-      return context.stripe.promotionCodes.retrieve(stripeId, {
-        expand: ENTITY_REGISTRY.promotion_code.stripeExpansions,
-      }, { stripeAccount: context.stripeAccountId });
+      return context.stripe.promotionCodes.retrieve(
+        stripeId,
+        {
+          expand: ENTITY_REGISTRY.promotion_code.stripeExpansions,
+        },
+        { stripeAccount: context.stripeAccountId }
+      );
     },
     convertToNotionProperties: (expandedEntity, dependencyPageIds) => {
       return stripePromotionCodeToNotionProperties(
@@ -184,9 +217,13 @@ export const ENTITY_REGISTRY: EntityConfigRegistry = {
     ],
     titleProperty: "Charge ID",
     retrieveFromStripe: (context, stripeId) => {
-      return context.stripe.charges.retrieve(stripeId, {
-        expand: ENTITY_REGISTRY.charge.stripeExpansions,
-      }, { stripeAccount: context.stripeAccountId });
+      return context.stripe.charges.retrieve(
+        stripeId,
+        {
+          expand: ENTITY_REGISTRY.charge.stripeExpansions,
+        },
+        { stripeAccount: context.stripeAccountId }
+      );
     },
     convertToNotionProperties: (expandedEntity, dependencyPageIds) => {
       return stripeChargeToNotionProperties(
@@ -247,9 +284,13 @@ export const ENTITY_REGISTRY: EntityConfigRegistry = {
     ],
     titleProperty: "Invoice ID",
     retrieveFromStripe: (context, stripeId) => {
-      return context.stripe.invoices.retrieve(stripeId, {
-        expand: ENTITY_REGISTRY.invoice.stripeExpansions,
-      }, { stripeAccount: context.stripeAccountId });
+      return context.stripe.invoices.retrieve(
+        stripeId,
+        {
+          expand: ENTITY_REGISTRY.invoice.stripeExpansions,
+        },
+        { stripeAccount: context.stripeAccountId }
+      );
     },
     convertToNotionProperties: (expandedEntity, dependencyPageIds) => {
       return stripeInvoiceToNotionProperties(
@@ -259,6 +300,10 @@ export const ENTITY_REGISTRY: EntityConfigRegistry = {
         dependencyPageIds.payment_intent
       );
     },
+    getSubEntityProcessor: (
+      context: HandlerContext,
+      dependencyProcessor: DependencyProcessor
+    ) => new InvoiceLineItemProcessor(context, dependencyProcessor),
   },
 
   subscription: {
@@ -312,9 +357,13 @@ export const ENTITY_REGISTRY: EntityConfigRegistry = {
     ],
     titleProperty: "Subscription ID",
     retrieveFromStripe: (context, stripeId) => {
-      return context.stripe.subscriptions.retrieve(stripeId, {
-        expand: ENTITY_REGISTRY.subscription.stripeExpansions,
-      }, { stripeAccount: context.stripeAccountId });
+      return context.stripe.subscriptions.retrieve(
+        stripeId,
+        {
+          expand: ENTITY_REGISTRY.subscription.stripeExpansions,
+        },
+        { stripeAccount: context.stripeAccountId }
+      );
     },
     convertToNotionProperties: (expandedEntity, dependencyPageIds) => {
       return stripeSubscriptionToNotionProperties(
@@ -325,6 +374,10 @@ export const ENTITY_REGISTRY: EntityConfigRegistry = {
         dependencyPageIds.product
       );
     },
+    getSubEntityProcessor: (
+      context: HandlerContext,
+      dependencyProcessor: DependencyProcessor
+    ) => new SubscriptionItemProcessor(context, dependencyProcessor),
   },
 
   subscription_item: {
@@ -354,9 +407,13 @@ export const ENTITY_REGISTRY: EntityConfigRegistry = {
     ],
     titleProperty: "Subscription Item ID",
     retrieveFromStripe: (context, stripeId) => {
-      return context.stripe.subscriptionItems.retrieve(stripeId, {
-        expand: ENTITY_REGISTRY.subscription_item.stripeExpansions,
-      }, { stripeAccount: context.stripeAccountId });
+      return context.stripe.subscriptionItems.retrieve(
+        stripeId,
+        {
+          expand: ENTITY_REGISTRY.subscription_item.stripeExpansions,
+        },
+        { stripeAccount: context.stripeAccountId }
+      );
     },
     convertToNotionProperties: (expandedEntity, dependencyPageIds) => {
       return stripeSubscriptionItemToNotionProperties(
@@ -387,9 +444,13 @@ export const ENTITY_REGISTRY: EntityConfigRegistry = {
     ],
     titleProperty: "Credit Note ID",
     retrieveFromStripe: (context, stripeId) => {
-      return context.stripe.creditNotes.retrieve(stripeId, {
-        expand: ENTITY_REGISTRY.credit_note.stripeExpansions,
-      }, { stripeAccount: context.stripeAccountId });
+      return context.stripe.creditNotes.retrieve(
+        stripeId,
+        {
+          expand: ENTITY_REGISTRY.credit_note.stripeExpansions,
+        },
+        { stripeAccount: context.stripeAccountId }
+      );
     },
     convertToNotionProperties: (expandedEntity, dependencyPageIds) => {
       return stripeCreditNoteToNotionProperties(
@@ -420,9 +481,13 @@ export const ENTITY_REGISTRY: EntityConfigRegistry = {
     ],
     titleProperty: "Dispute ID",
     retrieveFromStripe: (context, stripeId) => {
-      return context.stripe.disputes.retrieve(stripeId, {
-        expand: ENTITY_REGISTRY.dispute.stripeExpansions,
-      }, { stripeAccount: context.stripeAccountId });
+      return context.stripe.disputes.retrieve(
+        stripeId,
+        {
+          expand: ENTITY_REGISTRY.dispute.stripeExpansions,
+        },
+        { stripeAccount: context.stripeAccountId }
+      );
     },
     convertToNotionProperties: (expandedEntity, dependencyPageIds) => {
       return stripeDisputeToNotionProperties(
@@ -465,9 +530,13 @@ export const ENTITY_REGISTRY: EntityConfigRegistry = {
     ],
     titleProperty: "Invoice Item ID",
     retrieveFromStripe: (context, stripeId) => {
-      return context.stripe.invoiceItems.retrieve(stripeId, {
-        expand: ENTITY_REGISTRY.invoiceitem.stripeExpansions,
-      }, { stripeAccount: context.stripeAccountId });
+      return context.stripe.invoiceItems.retrieve(
+        stripeId,
+        {
+          expand: ENTITY_REGISTRY.invoiceitem.stripeExpansions,
+        },
+        { stripeAccount: context.stripeAccountId }
+      );
     },
     convertToNotionProperties: (expandedEntity, dependencyPageIds) => {
       return stripeInvoiceItemToNotionProperties(

@@ -1,6 +1,8 @@
 import type { DatabaseEntity, DatabaseStripeObject } from "@/types";
 import type { HandlerContext } from "@/handlers/stripe/webhook/shared/types";
 import type { Stripe } from "stripe";
+import type { ISubEntityProcessor } from "./services/sub-entity-processor";
+import type { DependencyProcessor } from "./services/dependency-processor";
 
 export type StripeTypeMap = {
   customer: Stripe.Customer;
@@ -56,6 +58,10 @@ export interface EntityConfig<K extends DatabaseEntity> {
     expandedEntity: StripeTypeMap[K],
     dependencyPageIds: Record<string, string | null>
   ) => Record<string, any>;
+  getSubEntityProcessor?: (
+    context: HandlerContext,
+    dependencyProcessor: DependencyProcessor
+  ) => ISubEntityProcessor;
 }
 
 /**

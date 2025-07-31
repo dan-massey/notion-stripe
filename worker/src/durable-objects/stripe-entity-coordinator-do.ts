@@ -1,7 +1,6 @@
 import { DurableObject } from "cloudflare:workers";
 import type { DatabaseEntity } from "@/types";
 import { findPageByTitle } from "@/utils/notion-api";
-import type Stripe from "stripe";
 
 export interface EntityMapping {
   stripeId: string;
@@ -9,6 +8,7 @@ export interface EntityMapping {
   entityType: DatabaseEntity;
   createdAt: number;
   updatedAt: number;
+  dataHash?: string;
 }
 
 export interface CoordinatedUpsertOptions {
@@ -17,51 +17,30 @@ export interface CoordinatedUpsertOptions {
   notionToken: string;
   databaseId: string;
   titleProperty: string;
+  updateHash: string;
   upsertOperation: () => Promise<{ id: string; [key: string]: any }>;
-  forceUpdate?: boolean; // If true, always run upsertOperation even if mapping exists
+  forceUpdate?: boolean;
 }
-
-export interface RelatedEntityIds {
-  customerPageId: string | null;
-  chargePageId: string | null;
-  invoicePageId: string | null;
-  paymentIntentPageId: string | null;
-  productPageId: string | null;
-  pricePageId: string | null;
-  subscriptionPageId: string | null;
-  disputePageId: string | null;
-  creditNotePageId: string | null;
-  invoiceItemPageId: string | null;
-  lineItemPageId: string | null;
-  promotionCodePageId: string | null;
-  couponPageId: string | null;
-}
-
-export type StripeEntityUnion = 
-  | Stripe.Customer 
-  | Stripe.Charge 
-  | Stripe.Invoice 
-  | Stripe.PaymentIntent 
-  | Stripe.Product 
-  | Stripe.Price 
-  | Stripe.Subscription 
-  | Stripe.SubscriptionItem
-  | Stripe.Dispute 
-  | Stripe.CreditNote 
-  | Stripe.InvoiceItem 
-  | Stripe.InvoiceLineItem 
-  | Stripe.PromotionCode
-  | Stripe.Coupon
-  | Stripe.Discount;
 
 export class StripeEntityCoordinator extends DurableObject {
   private inProgress = new Map<string, Promise<EntityMapping>>();
 
-  /**
-   * Get the entity mapping for a given Stripe entity
-   */
-  private async getEntityMapping(
-    entityType: DatabaseEntity, 
+  async alarm(): Promise<void> {
+    const list = await this.ctx.storage.list<EntityMapping>({
+      prefix: "entity:",
+    });
+    const now = Date.now();
+    const EXPIRY_MS = 1000 * 60 * 60 * 24 * 1; // 1 day
+    for (const [key, mapping] of list) {
+      if ((mapping as EntityMapping).updatedAt < now - EXPIRY_MS) {
+        await this.ctx.storage.delete(key);
+      }
+    }
+    await this.ctx.storage.setAlarm(now + EXPIRY_MS);
+  }
+
+  async getEntityMapping(
+    entityType: DatabaseEntity,
     stripeId: string
   ): Promise<EntityMapping | null> {
     const key = this.getStorageKey(entityType, stripeId);
@@ -69,17 +48,14 @@ export class StripeEntityCoordinator extends DurableObject {
     return mapping || null;
   }
 
-  /**
-   * Store the entity mapping for a given Stripe entity
-   */
   private async setEntityMapping(
     entityType: DatabaseEntity,
     stripeId: string,
-    notionPageId: string
+    notionPageId: string,
+    dataHash?: string
   ): Promise<EntityMapping> {
     const key = this.getStorageKey(entityType, stripeId);
     const now = Date.now();
-    
     const existing = await this.ctx.storage.get<EntityMapping>(key);
     const mapping: EntityMapping = {
       stripeId,
@@ -87,6 +63,7 @@ export class StripeEntityCoordinator extends DurableObject {
       entityType,
       createdAt: existing?.createdAt || now,
       updatedAt: now,
+      dataHash,
     };
 
     await this.ctx.storage.put(key, mapping);
@@ -108,7 +85,9 @@ export class StripeEntityCoordinator extends DurableObject {
   /**
    * Coordinated upsert that prevents race conditions
    */
-  async coordinatedUpsert(options: CoordinatedUpsertOptions): Promise<EntityMapping> {
+  async coordinatedUpsert(
+    options: CoordinatedUpsertOptions
+  ): Promise<EntityMapping> {
     const { entityType, stripeId } = options;
     const lockKey = `${entityType}:${stripeId}`;
 
@@ -123,84 +102,80 @@ export class StripeEntityCoordinator extends DurableObject {
     this.inProgress.set(lockKey, operationPromise);
 
     try {
-      const result = await operationPromise;
-      return result;
+      return await operationPromise;
     } finally {
       this.inProgress.delete(lockKey);
     }
   }
 
-  /**
-   * Internal method to perform the actual coordinated upsert
-   */
-  private async performCoordinatedUpsert(options: CoordinatedUpsertOptions): Promise<EntityMapping> {
-    const { entityType, stripeId, upsertOperation, forceUpdate = false } = options;
+  private async performCoordinatedUpsert(
+    options: CoordinatedUpsertOptions
+  ): Promise<EntityMapping> {
+    const {
+      entityType,
+      stripeId,
+      upsertOperation,
+      forceUpdate = false,
+      updateHash
+    } = options;
 
-    // Check if we have a mapping and the operation hasn't run yet
+    console.log(`[Durable Object] Running coordinated upsert for ${entityType} ${stripeId}`);
     const existingMapping = await this.getEntityMapping(entityType, stripeId);
+    if (existingMapping && existingMapping.notionPageId) {
+      console.log(`[Durable Object] Found existing mapping: ${entityType} ${stripeId} --> ${existingMapping?.notionPageId}`);
+    }
+
+    if (existingMapping && existingMapping.dataHash === updateHash) {
+      console.log(
+        `[Durable Object] Existing hash for ${entityType} ${stripeId}. Skipping Notion upsert.`
+      );
+      return await this.setEntityMapping(
+        entityType,
+        stripeId,
+        existingMapping.notionPageId,
+        updateHash
+      );
+    }
     
     if (existingMapping && !forceUpdate) {
-      console.log(`Found existing mapping for ${entityType}:${stripeId} -> ${existingMapping.notionPageId} (using cache)`);
-      // Just update the timestamp and return - the page already exists
-      return await this.setEntityMapping(entityType, stripeId, existingMapping.notionPageId);
+      console.log(
+        `[Durable Object] Existing mapping for ${entityType} ${stripeId}. No force update. Skipping Notion upsert.`
+      );
+      return await this.setEntityMapping(
+        entityType,
+        stripeId,
+        existingMapping.notionPageId,
+        updateHash
+      );
     }
-
-    // Either no mapping exists, or forceUpdate is true - perform the upsert operation
-    if (existingMapping && forceUpdate) {
-      console.log(`Found existing mapping for ${entityType}:${stripeId} -> ${existingMapping.notionPageId} (force updating)`);
-    } else {
-      console.log(`No mapping found, performing upsert operation for ${entityType}:${stripeId}`);
-    }
     
-    const result = await upsertOperation();
+    const upsertResult = await upsertOperation();
     
-    // Store/update the mapping for future use
-    await this.setEntityMapping(entityType, stripeId, result.id);
-    
-    console.log(`Stored mapping ${entityType}:${stripeId} -> ${result.id}`);
-    return await this.getEntityMapping(entityType, stripeId) as EntityMapping;
+    await this.setEntityMapping(
+      entityType,
+      stripeId,
+      upsertResult.id,
+      updateHash
+    );
+    return (await this.getEntityMapping(entityType, stripeId)) as EntityMapping;
   }
 
-  /**
-   * Generate storage key for entity mapping
-   */
   private getStorageKey(entityType: DatabaseEntity, stripeId: string): string {
     return `entity:${entityType}:${stripeId}`;
   }
 
-  /**
-   * Get all entity mappings (for debugging/administration)
-   */
-  private async getAllMappings(): Promise<EntityMapping[]> {
-    const mappings: EntityMapping[] = [];
-    const list = await this.ctx.storage.list({ prefix: 'entity:' });
-    
-    for (const [_, mapping] of list) {
-      mappings.push(mapping as EntityMapping);
-    }
-    
-    return mappings;
-  }
-
-  /**
-   * Clear all mappings (for testing/reset)
-   */
   async clearAllMappings(): Promise<void> {
     await this.ctx.storage.deleteAll();
   }
 
-  /**
-   * Delete a specific entity mapping
-   */
-  private async deleteEntityMapping(entityType: DatabaseEntity, stripeId: string): Promise<void> {
+  private async deleteEntityMapping(
+    entityType: DatabaseEntity,
+    stripeId: string
+  ): Promise<void> {
     const key = this.getStorageKey(entityType, stripeId);
     await this.ctx.storage.delete(key);
   }
 
-  /**
-   * Get the Notion page ID for a Stripe entity, using cache when possible
-   * This is a convenience method for single entity lookups
-   */
   private async getEntityPageId(
     notionToken: string,
     entityType: DatabaseEntity,
@@ -208,24 +183,26 @@ export class StripeEntityCoordinator extends DurableObject {
     databaseId: string,
     titleProperty: string
   ): Promise<string | null> {
-    // First check if we have a cached mapping
     const existingMapping = await this.getEntityMapping(entityType, stripeId);
     if (existingMapping) {
       return existingMapping.notionPageId;
     }
 
-    // Fall back to findPageByTitle
     try {
-      const page = await findPageByTitle(notionToken, databaseId, titleProperty, stripeId);
+      const page = await findPageByTitle(
+        notionToken,
+        databaseId,
+        titleProperty,
+        stripeId
+      );
       if (page?.id) {
-        // Cache the result for future use
         await this.setEntityMapping(entityType, stripeId, page.id);
         return page.id;
       }
     } catch (error) {
       console.warn(`Failed to resolve ${entityType} ${stripeId}:`, error);
     }
-    
+
     return null;
   }
 }

@@ -9,7 +9,7 @@ import { ensureAccountDo } from "@/durable-objects/utils";
 import { getNotionToken } from "@/utils/stripe";
 import { HandlerResult, type HandlerContext } from "./webhook/shared/types";
 import { handleNotionError } from "./webhook/shared/utils";
-import { EntityProcessor } from "@/entity-processor/entity-processor";
+import { EntityProcessor } from "@/entity-processor/entity-processor-refactored";
 
 const WEBHOOK_OBJECT_KINDS: StripeApiObjectKinds = [
   "customer",
@@ -25,6 +25,7 @@ const WEBHOOK_OBJECT_KINDS: StripeApiObjectKinds = [
   "promotion_code",
   "payment_intent",
   "subscription_item",
+  "discount",
 ];
 
 const tryUpsert = async (
@@ -69,12 +70,20 @@ const tryUpsert = async (
     // Create EntityProcessor from webhook context
     const entityProcessor = EntityProcessor.fromWebhook(context);
 
-    // Process the main entity with all its sub-entities (line items, subscription items, discounts)
-    await entityProcessor.processEntityWithSubEntities(
-      stripeObject.object,
-      stripeObject.id,
-      databases
-    );
+    // Special handling for discount events - pass the discount object directly
+    if (stripeObject.object === "discount") {
+      await entityProcessor.processDiscountEvent(
+        stripeObject as any,
+        databases
+      );
+    } else {
+      // Process the main entity with all its sub-entities (line items, subscription items, discounts)
+      await entityProcessor.processEntityComplete(
+        stripeObject.object,
+        stripeObject.id,
+        databases
+      );
+    }
 
     return { success: true };
   } catch (error) {

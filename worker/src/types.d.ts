@@ -62,7 +62,8 @@ export type StripeApiObjectKinds = [
   "coupon",
   "promotion_code",
   "payment_intent",
-  "subscription_item"
+  "subscription_item",
+  "discount"
 ];
 
 export type StripeApiObject = StripeApiObjectKinds[number];
@@ -80,7 +81,8 @@ export type ApiStripeObject =
   | Stripe.Product
   | Stripe.PromotionCode
   | Stripe.Coupon
-  | Stripe.Subscription;
+  | Stripe.Subscription
+  | Stripe.Discount;
 
 export type DatabaseStripeObject = ApiStripeObject | Stripe.InvoiceLineItem | Stripe.Discount;
 

@@ -15,7 +15,7 @@ import { markCompleted, updateProgress } from "./steps/update-status";
 import { getNextEntityFromStripe } from "./steps/process-entity-with-dependencies";
 
 // Import entity processing logic
-import { EntityProcessor } from "@/entity-processor/entity-processor";
+import { EntityProcessor } from "@/entity-processor/entity-processor-refactored";
 
 export class DependencyAwareBackfillWorkflow extends WorkflowEntrypoint<
   CloudflareBindings,
@@ -158,7 +158,7 @@ export class DependencyAwareBackfillWorkflow extends WorkflowEntrypoint<
           return null;
         }
 
-        await entityProcessor.processEntityWithSubEntities(
+        await entityProcessor.processEntityComplete(
           entityToBackfill as DatabaseEntity,
           mainEntityData.id,
           databaseIds,

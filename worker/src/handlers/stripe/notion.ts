@@ -25,7 +25,7 @@ import { getPromotionCodeSchema } from "@/schemas/promotion-code";
 import { getPaymentIntentSchema } from "@/schemas/payment-intent";
 import { getCouponSchema } from "@/schemas/coupon";
 import { getDiscountSchema } from "@/schemas/discount";
-
+import { getCoordinator } from "@/upload-coordinator/utils";
 export const getNotionLink = async (c: AppContext) => {
   const notionAuthLink = `${c.env.BASE_URL}/auth/signin?account_id=${c.get(
     "stripeAccountId"
@@ -39,8 +39,8 @@ const resetNotionConnection = async (
   accountDo: DurableObjectStub<AccountDurableObject>
 ) => {
   await accountDo.clearNotionPages();
-  const doId = c.env.STRIPE_ENTITY_COORDINATOR.idFromName(stripeAccountId);
-  const coordinator = c.env.STRIPE_ENTITY_COORDINATOR.get(doId);
+
+  const coordinator = getCoordinator({env: c.env}, stripeAccountId)
   await coordinator.clearAllMappings();
 
   try {
@@ -129,8 +129,7 @@ export const clearDatabaseLinks = async (c: AppContext) => {
   );
 
   await accountDo.clearNotionPages();
-  const doId = c.env.STRIPE_ENTITY_COORDINATOR.idFromName(stripeAccountId);
-  const coordinator = c.env.STRIPE_ENTITY_COORDINATOR.get(doId);
+  const coordinator = getCoordinator({env: c.env}, stripeAccountId);
   await coordinator.clearAllMappings();
 
   const resp: AccountStatus | null = await accountDo.getStatus();
