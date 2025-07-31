@@ -55,9 +55,14 @@
   },
   "workflows": [
     {
-      "name": "backfill-workflow",
+      "name": "notion-backfill-workflow",
       "binding": "BACKFILL_WORKFLOW",
       "class_name": "DependencyAwareBackfillWorkflow"
+    },
+    {
+      "name": "notion-webhook-event-workflow",
+      "binding": "WEBHOOK_WORKFLOW",
+      "class_name": "WebhookEventWorkflow"
     }
   ],
   "kv_namespaces": [

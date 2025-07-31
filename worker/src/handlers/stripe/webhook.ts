@@ -1,101 +1,11 @@
-import type { Stripe } from "stripe";
 import type {
   AppContext,
   StripeMode,
-  ApiStripeObject,
-  StripeApiObjectKinds,
 } from "@/types";
+import type { WorkflowParams } from "@/webhook-workflow";
 import { ensureAccountDo } from "@/durable-objects/utils";
 import { getNotionToken } from "@/utils/stripe";
-import { HandlerResult, type HandlerContext } from "./webhook/shared/types";
-import { handleNotionError } from "./webhook/shared/utils";
-import { EntityProcessor } from "@/entity-processor/entity-processor-refactored";
 
-const WEBHOOK_OBJECT_KINDS: StripeApiObjectKinds = [
-  "customer",
-  "invoice",
-  "charge",
-  "subscription",
-  "credit_note",
-  "dispute",
-  "invoiceitem",
-  "price",
-  "product",
-  "coupon",
-  "promotion_code",
-  "payment_intent",
-  "subscription_item",
-  "discount",
-];
-
-const tryUpsert = async (
-  event: Stripe.Event,
-  context: HandlerContext
-): Promise<HandlerResult> => {
-  const accountStatus = await context.account.getStatus();
-  if (!accountStatus) {
-    return {
-      success: false,
-      error: "Account status not found",
-      statusCode: 200,
-    };
-  }
-  const databases = accountStatus.notionConnection?.databases;
-  if (!databases) {
-    return {
-      success: false,
-      error: "No databases created",
-      statusCode: 200,
-    };
-  }
-
-  const stripeObject = event.data.object as ApiStripeObject;
-  if (!WEBHOOK_OBJECT_KINDS.includes(stripeObject.object)) {
-    return {
-      success: false,
-      error: `Unsupported entity: ${stripeObject.object}`,
-      statusCode: 200,
-    };
-  }
-
-  if (!stripeObject.id) {
-    return {
-      success: false,
-      error: `Entity ${stripeObject.object} does not have an ID`,
-      statusCode: 200,
-    };
-  }
-
-  try {
-    // Create EntityProcessor from webhook context
-    const entityProcessor = EntityProcessor.fromWebhook(context);
-
-    // Special handling for discount events - pass the discount object directly
-    if (stripeObject.object === "discount") {
-      await entityProcessor.processDiscountEvent(
-        stripeObject as any,
-        databases
-      );
-    } else {
-      // Process the main entity with all its sub-entities (line items, subscription items, discounts)
-      await entityProcessor.processEntityComplete(
-        stripeObject.object,
-        stripeObject.id,
-        databases
-      );
-    }
-
-    return { success: true };
-  } catch (error) {
-    await handleNotionError(error, context, stripeObject.object);
-    console.error(`Error upserting ${stripeObject.object} to Notion:`, error);
-    return {
-      success: false,
-      error: `Failed to update ${stripeObject.object} in Notion`,
-      statusCode: 200,
-    };
-  }
-};
 
 export const stripeWebhookHandler = async (c: AppContext) => {
   const modeFromUrl = c.req.param("mode") as StripeMode;
@@ -140,37 +50,22 @@ export const stripeWebhookHandler = async (c: AppContext) => {
     return c.json({ message: "No account status available" });
   }
 
-  if (
-    !accountStatus?.subscription?.stripeSubscriptionId &&
-    !["active", "trialing", "past_due"].includes(
-      accountStatus?.subscription?.stripeSubscriptionStatus ?? ""
-    )
-  ) {
-    return c.json({
-      message: `No active subscription for ${modeFromUrl} ${stripeAccountId} not syncing event to Notion.`,
+
+  if (accountStatus.notionConnection?.databases) {
+    const params: WorkflowParams = {
+      stripeMode: modeFromUrl,
+      stripeAccountId: stripeAccountId,
+      databases: accountStatus.notionConnection?.databases,
+      stripeEvent: event,
+    };
+    const insertWorkflow = await c.env.WEBHOOK_WORKFLOW.create({
+      id: event.id,
+      params: params,
     });
+    console.log(`[Webhook Handler] Inserted webhook workflow run ${insertWorkflow.id}`);
+      return c.json({ message: "Event processed successfully" });
+  } else {
+      return c.json({ message: "No databases set up" });
   }
 
-  // Create context for the handler
-  const context: HandlerContext = {
-    stripe: c.get("stripe"),
-    notionToken,
-    stripeAccountId,
-    account,
-    env: c.env,
-  };
-
-  // Execute the handler
-  const result = await tryUpsert(event, context);
-
-  // Return appropriate response based on result
-  if (!result.success) {
-    const response = result.error
-      ? { error: result.error }
-      : { message: result.message };
-    const statusCode = result.statusCode || 400;
-    return c.json(response, statusCode as any);
-  }
-
-  return c.json({ message: result.message || "Event processed successfully" });
 };

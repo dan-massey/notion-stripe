@@ -9,29 +9,21 @@ import type { WorkflowParams } from "./types";
 
 // Import step functions
 import { determineEntityToBackfill } from "./steps/determine-entity";
-import { getNotionToken } from "./steps/get-notion-token";
+import { getNotionToken } from "../workflow-utils/get-notion-token";
 import { getDatabaseIds } from "./steps/get-database-ids";
 import { markCompleted, updateProgress } from "./steps/update-status";
 import { getNextEntityFromStripe } from "./steps/process-entity-with-dependencies";
 
 // Import entity processing logic
 import { EntityProcessor } from "@/entity-processor/entity-processor-refactored";
+import { getAccountStub } from "@/workflow-utils/get-account-stub";
+import { getStripe } from "@/workflow-utils/get-stripe";
+import { getDatabaseMap } from "@/workflow-utils/get-database-map";
 
 export class DependencyAwareBackfillWorkflow extends WorkflowEntrypoint<
   CloudflareBindings,
   WorkflowParams
 > {
-  getStripe = (stripeMode: StripeMode) => {
-    let secret: string = this.env.STRIPE_TEST_KEY;
-    if (stripeMode === "live") {
-      secret = this.env.STRIPE_LIVE_KEY;
-    } else if (stripeMode === "sandbox") {
-      secret = this.env.STRIPE_SANDBOX_KEY;
-    }
-    return new Stripe(secret, {
-      typescript: true,
-    });
-  };
 
   async run(event: WorkflowEvent<WorkflowParams>, step: WorkflowStep) {
     const entityToBackfill = await step.do(
@@ -56,7 +48,7 @@ export class DependencyAwareBackfillWorkflow extends WorkflowEntrypoint<
     const stripeListResults = await step.do(
       "Get next entity from Stripe",
       async () => {
-        const stripe = this.getStripe(event.payload.stripeMode);
+        const stripe = getStripe(this.env, event.payload.stripeMode);
         const startingAfter =
           event.payload.entityStatus[entityToBackfill].startingAfter;
         return getNextEntityFromStripe(
@@ -101,7 +93,7 @@ export class DependencyAwareBackfillWorkflow extends WorkflowEntrypoint<
     }
 
     const notionToken = await step.do("Get notion token", async () => {
-      const stripe = this.getStripe(event.payload.stripeMode);
+      const stripe = getStripe(this.env, event.payload.stripeMode);
       return getNotionToken(stripe, event.payload.stripeAccountId);
     });
 
@@ -121,21 +113,9 @@ export class DependencyAwareBackfillWorkflow extends WorkflowEntrypoint<
     }
 
     const mainEntityData = stripeListResults.data[0];
-    const stripe = this.getStripe(event.payload.stripeMode);
+    const stripe = getStripe(this.env, event.payload.stripeMode);
 
-    // Build database IDs mapping for coordinated upsert
-    const databaseIdsMap: Record<string, string | undefined> = {};
-    Object.entries(databaseIds).forEach(([key, value]) => {
-      if (value?.pageId) {
-        databaseIdsMap[key] = value.pageId;
-      }
-    });
-
-    // Create handler context for coordinated upsert
-    const id = this.env.ACCOUNT_DURABLE_OBJECT.idFromName(
-      event.payload.stripeAccountId
-    );
-    const accountStub = this.env.ACCOUNT_DURABLE_OBJECT.get(id);
+    const accountStub = getAccountStub(this.env, event.payload.stripeAccountId)
 
     // Create EntityProcessor with step wrapper
     const entityProcessor = EntityProcessor.fromWorkflow({

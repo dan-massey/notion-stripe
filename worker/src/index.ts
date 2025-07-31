@@ -63,3 +63,4 @@ export default app;
 export { AccountDurableObject } from "./durable-objects/account-do";
 export { StripeEntityCoordinator } from "./durable-objects/stripe-entity-coordinator-do";
 export { DependencyAwareBackfillWorkflow } from "./backfill-workflow/dependency-aware-backfill";
+export { WebhookEventWorkflow } from "./webhook-workflow/index";
