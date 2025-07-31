@@ -231,7 +231,7 @@ export async function createDatabase(
   });
 }
 
-export async function createPage(
+async function createPage(
   authToken: string,
   params: CreatePageParameters
 ): Promise<CreatePageResponse> {
@@ -261,7 +261,7 @@ export async function searchNotion(
   });
 }
 
-export async function updatePage(
+async function updatePage(
   authToken: string,
   pageId: string,
   params: Omit<UpdatePageParameters, "page_id">
