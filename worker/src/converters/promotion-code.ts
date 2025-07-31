@@ -7,7 +7,7 @@ import {
   createSelectProperty,
   createDateProperty,
   createRelationProperty,
-} from "@/utils/notion-properties";
+} from "@/converters/notion-properties";
 
 export function stripePromotionCodeToNotionProperties(
   promotionCode: Stripe.PromotionCode,

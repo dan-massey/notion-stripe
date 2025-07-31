@@ -2,7 +2,6 @@
  * Utility functions for creating Notion properties
  * These eliminate repetitive property creation patterns across converters
  */
-import type Stripe from "stripe";
 
 export function createRichTextProperty(
   content: string | null | undefined

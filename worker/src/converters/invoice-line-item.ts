@@ -8,7 +8,7 @@ import {
   createDateProperty,
   createRelationProperty,
   stringFromObject,
-} from "@/utils/notion-properties";
+} from "@/converters/notion-properties";
 
 export function stripeInvoiceLineItemToNotionProperties(
   lineItem: Stripe.InvoiceLineItem, 

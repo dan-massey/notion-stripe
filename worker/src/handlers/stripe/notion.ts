@@ -1,5 +1,5 @@
 import type { AppContext } from "@/types";
-import type { AccountDurableObject, AccountStatus } from "@/account-do";
+import type { AccountDurableObject, AccountStatus } from "@/durable-objects/account-do";
 import { getNotionToken, deleteNotionToken } from "@/utils/stripe";
 import {
   searchNotion,
@@ -14,7 +14,7 @@ import { getChargeSchema } from "@/schemas/charge";
 import { getInvoiceSchema } from "@/schemas/invoice";
 import { getSubscriptionSchema } from "@/schemas/subscription";
 import { getSubscriptionItemSchema } from "@/schemas/subscription-item";
-import { ensureAccountDo } from "@/utils/do";
+import { ensureAccountDo } from "@/durable-objects/utils";
 import { getCreditNoteSchema } from "@/schemas/credit-note";
 import { getDisputeSchema } from "@/schemas/dispute";
 import { getInvoiceItemSchema } from "@/schemas/invoice-item";

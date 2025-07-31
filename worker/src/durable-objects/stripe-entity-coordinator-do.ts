@@ -2,7 +2,7 @@ import { DurableObject } from "cloudflare:workers";
 import type { DatabaseEntity } from "@/types";
 import { findPageByTitle } from "@/utils/notion-api";
 import type Stripe from "stripe";
-import { Databases } from "@/account-do";
+import { Databases } from "@/durable-objects/account-do";
 
 export interface EntityMapping {
   stripeId: string;

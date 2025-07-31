@@ -1,6 +1,6 @@
 import { makeStripeClient } from "@/utils/stripe";
 import { handleCheckoutComplete } from "@/utils/membership";
-import { ensureAccountDo } from "@/utils/do";
+import { ensureAccountDo } from "@/durable-objects/utils";
 import type { Stripe } from "stripe";
 import type { AppContext, StripeMode } from "@/types";
 

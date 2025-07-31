@@ -9,7 +9,7 @@ import {
   createUrlProperty,
   createRelationProperty,
   stringFromObject,
-} from "@/utils/notion-properties";
+} from "@/converters/notion-properties";
 
 export function stripeCreditNoteToNotionProperties(
   creditNote: Stripe.CreditNote, 

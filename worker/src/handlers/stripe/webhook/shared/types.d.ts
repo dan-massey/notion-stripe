@@ -1,4 +1,4 @@
-import type { AccountStatus, AccountDurableObject } from "@/account-do";
+import type { AccountStatus, AccountDurableObject } from "@/durable-objects/account-do";
 import type { Env } from "@/types";
 import type Stripe from "stripe";
 

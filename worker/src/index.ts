@@ -60,6 +60,6 @@ app.post(
 );
 
 export default app;
-export { AccountDurableObject } from "./account-do";
-export { StripeEntityCoordinator } from "./stripe-entity-coordinator";
-export { DependencyAwareBackfillWorkflow } from "./workflow/dependency-aware-backfill";
+export { AccountDurableObject } from "./durable-objects/account-do";
+export { StripeEntityCoordinator } from "./durable-objects/stripe-entity-coordinator-do";
+export { DependencyAwareBackfillWorkflow } from "./backfill-workflow/dependency-aware-backfill";

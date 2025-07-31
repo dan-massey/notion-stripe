@@ -7,7 +7,7 @@ import {
   createSelectProperty,
   createDateProperty,
   createRelationProperty,
-} from "@/utils/notion-properties";
+} from "@/converters/notion-properties";
 
 export function stripePriceToNotionProperties(price: Stripe.Price, productNotionPageId: string | null) {
   const properties: Record<string, any> = {

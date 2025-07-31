@@ -6,7 +6,7 @@ import {
   createUrlProperty,
   createDateProperty,
   createNumberProperty
-} from "@/utils/notion-properties";
+} from "@/converters/notion-properties";
 
 export function stripeProductToNotionProperties(product: Stripe.Product) {
   const properties: Record<string, any> = {

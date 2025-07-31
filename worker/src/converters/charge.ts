@@ -11,7 +11,7 @@ import {
   stringFromObject,
   createPhoneProperty,
   createRelationProperty,
-} from "@/utils/notion-properties";
+} from "@/converters/notion-properties";
 
 export function stripeChargeToNotionProperties(
   charge: Stripe.Charge,

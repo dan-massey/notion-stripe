@@ -11,7 +11,7 @@ import {
   createPhoneProperty,
   createRelationProperty,
   stringFromObject,
-} from "@/utils/notion-properties";
+} from "@/converters/notion-properties";
 
 export function stripeInvoiceToNotionProperties(
   invoice: Stripe.Invoice, 

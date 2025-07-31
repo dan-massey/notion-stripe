@@ -5,7 +5,7 @@
 import type { HelloWorldResponse } from "./handlers/stripe/helloworld";
 import type { SearchResult } from "./utils/notion-api";
 import type { StripeMode, BackfillWorkflowStatus } from "./types";
-import type { AccountStatus } from "./account-do";
+import type { AccountStatus } from "./durable-objects/account-do";
 import {
   clearDatabaseLinks,
   deleteNotionAuth,

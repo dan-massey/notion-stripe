@@ -1,5 +1,5 @@
 import type { AppContext, StripeMode } from "@/types";
-import { ensureAccountDo } from "@/utils/do";
+import { ensureAccountDo } from "@/durable-objects/utils";
 import type { AccountResponse } from "@/stripe-frontend-endpoints";
 const checkoutLinks = {
   test: "https://buy.stripe.com/test_bJe9ASfRtdBXd6CeDbc3m00",

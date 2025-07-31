@@ -82,7 +82,7 @@ export type ApiStripeObject =
   | Stripe.Coupon
   | Stripe.Subscription;
 
-export type DatabaseStripeObject = ApiStripeObject | Stripe.InvoiceLineItem;
+export type DatabaseStripeObject = ApiStripeObject | Stripe.InvoiceLineItem | Stripe.Discount;
 
 export type BackfillWorkflowStatus = {
   startedAt: number;

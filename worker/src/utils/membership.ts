@@ -1,5 +1,5 @@
 import type { Stripe } from "stripe";
-import type { AccountDurableObject } from "@/account-do";
+import type { AccountDurableObject } from "@/durable-objects/account-do";
 import { StripeMode } from "@/types";
 
 export const handleCheckoutComplete = async (

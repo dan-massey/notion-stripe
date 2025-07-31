@@ -8,7 +8,7 @@ import {
   createSelectProperty,
   createDateProperty,
   createRelationProperty,
-} from "@/utils/notion-properties";
+} from "@/converters/notion-properties";
 
 export function stripeDisputeToNotionProperties(
   dispute: Stripe.Dispute,

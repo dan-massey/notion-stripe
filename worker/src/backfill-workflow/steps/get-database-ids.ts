@@ -1,4 +1,4 @@
-import { AccountDurableObject, type Databases } from "@/account-do";
+import { AccountDurableObject, type Databases } from "@/durable-objects/account-do";
 
 export async function getDatabaseIds(
   accountDurableObject: DurableObjectNamespace<AccountDurableObject>,

@@ -1,7 +1,7 @@
 import { Stripe } from "stripe";
-import type { StripeApiObject, DatabaseEntity, ApiStripeObject } from "@/types";
-import { ENTITY_REGISTRY } from "@/utils/coordinated-upsert/entity-registry";
-import { topologicalSort } from "@/utils/coordinated-upsert/dependency-resolver";
+import type { StripeApiObject, DatabaseEntity, ApiStripeObject, DatabaseStripeObject} from "@/types";
+import { ENTITY_REGISTRY } from "@/entity-processor/entity-registry";
+import { topologicalSort } from "@/entity-processor/dependency-resolver";
 
 type StripeListResponse<T> = {
   data: T[];
@@ -25,12 +25,12 @@ export type EntityDependencyPlan = {
 export async function createEntityDependencyPlan(
   stripe: Stripe,
   mainEntityType: StripeApiObject,
-  mainEntityData: any,
+  mainEntityData: DatabaseStripeObject,
   stripeAccountId: string
 ): Promise<EntityDependencyPlan> {
   console.log(`📋 Creating dependency plan for ${mainEntityType} ${mainEntityData.id}`);
   
-  const config = ENTITY_REGISTRY[mainEntityType as DatabaseEntity];
+  const config = ENTITY_REGISTRY[mainEntityType];
   if (!config) {
     throw new Error(`No configuration found for entity type: ${mainEntityType}`);
   }
@@ -38,7 +38,7 @@ export async function createEntityDependencyPlan(
   const dependencySteps: Array<{
     entityType: StripeApiObject;
     stripeId: string;
-    entityData: any;
+    entityData: DatabaseStripeObject;
   }> = [];
 
   // Get dependencies in topological order
@@ -109,7 +109,7 @@ export async function getNextEntityFromStripe(
     listOptions.starting_after = startingAfter;
   }
 
-  const requestOptions = { stripeAccount: stripeAccountId };
+  const requestOptions: Stripe.RequestOptions = { stripeAccount: stripeAccountId };
 
   // Get expansion fields from ENTITY_REGISTRY and prepend with "data."
   // Filter out fields that would exceed Stripe's 4-level expansion limit

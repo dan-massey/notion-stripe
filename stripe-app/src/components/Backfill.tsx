@@ -81,7 +81,7 @@ export const Backfill = () => {
             </Box>
             <Box>
               {backfillStatus.status.recordsProcessed === 0 ? 'Getting started' : `${backfillStatus.status.recordsProcessed} rows synced so far`} 
-              {backfillStatus.status.currentEntity && `, currently exporting ${backfillStatus.status.currentEntity} records.`}
+              {backfillStatus.status.currentEntity && `, currently exporting ${backfillStatus.status.currentEntity} and their related records.`}
             </Box>
           </>
         )}

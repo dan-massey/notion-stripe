@@ -9,9 +9,14 @@ import {
   createDateProperty,
   createPhoneProperty,
   stringFromObject,
-} from "@/utils/notion-properties";
+} from "@/converters/notion-properties";
 
 export function stripeCustomerToNotionProperties(customer: Stripe.Customer) {
+  if (customer.deleted) {
+    return {
+      "Customer ID": createTitleProperty(customer.id)
+    }
+  }
   const properties: Record<string, any> = {
     "Customer ID": createTitleProperty(customer.id),
     "Name": createRichTextProperty(customer.name),

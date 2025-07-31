@@ -1,5 +1,24 @@
-import type { DatabaseEntity } from "@/types";
+import type { DatabaseEntity, DatabaseStripeObject } from "@/types";
 import type { HandlerContext } from "@/handlers/stripe/webhook/shared/types";
+import type { Stripe } from "stripe";
+
+export type StripeTypeMap = {
+  customer: Stripe.Customer;
+  product: Stripe.Product;
+  coupon: Stripe.Coupon;
+  payment_intent: Stripe.PaymentIntent;
+  price: Stripe.Price;
+  promotion_code: Stripe.PromotionCode;
+  charge: Stripe.Charge;
+  invoice: Stripe.Invoice;
+  subscription: Stripe.Subscription;
+  subscription_item: Stripe.SubscriptionItem;
+  credit_note: Stripe.CreditNote;
+  dispute: Stripe.Dispute;
+  invoiceitem: Stripe.InvoiceItem;
+  discount: Stripe.Discount;
+  line_item: Stripe.InvoiceLineItem;
+};
 
 /**
  * Represents a dependency of an entity on another entity
@@ -18,9 +37,9 @@ export interface EntityDependency {
 /**
  * Configuration for a single entity type in the coordinated upsert system
  */
-export interface EntityConfig {
+export interface EntityConfig<K extends DatabaseEntity> {
   /** The entity type this config is for */
-  entityType: DatabaseEntity;
+  entityType: K;
   /** Stripe API expansion parameters needed to resolve dependencies */
   stripeExpansions: string[];
   /** List of entities this entity depends on */
@@ -31,10 +50,10 @@ export interface EntityConfig {
   retrieveFromStripe: (
     context: HandlerContext,
     stripeId: string
-  ) => Promise<any>;
+  ) => Promise<StripeTypeMap[K]>;
   /** Function to convert Stripe entity to Notion properties */
   convertToNotionProperties: (
-    expandedEntity: any,
+    expandedEntity: StripeTypeMap[K],
     dependencyPageIds: Record<string, string | null>
   ) => Record<string, any>;
 }
@@ -42,7 +61,9 @@ export interface EntityConfig {
 /**
  * Registry of all entity configurations
  */
-export type EntityConfigRegistry = Record<DatabaseEntity, EntityConfig>;
+export type EntityConfigRegistry = {
+  [K in DatabaseEntity]: EntityConfig<K>;
+};
 
 /**
  * Parameters for dependency resolution
