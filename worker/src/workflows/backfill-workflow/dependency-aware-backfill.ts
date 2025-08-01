@@ -3,8 +3,7 @@ import {
   WorkflowStep,
   WorkflowEvent,
 } from "cloudflare:workers";
-import { Stripe } from "stripe";
-import type { StripeMode, DatabaseEntity } from "@/types";
+import type { DatabaseEntity } from "@/types";
 import type { WorkflowParams } from "./types";
 
 // Import step functions
@@ -18,7 +17,6 @@ import { getNextEntityFromStripe } from "./steps/process-entity-with-dependencie
 import { EntityProcessor } from "@/entity-processor/entity-processor-refactored";
 import { getAccountStub } from "@/workflows/utils/get-account-stub";
 import { getStripe } from "@/workflows/utils/get-stripe";
-import { getDatabaseMap } from "@/workflows/utils/get-database-map";
 
 export class DependencyAwareBackfillWorkflow extends WorkflowEntrypoint<
   CloudflareBindings,

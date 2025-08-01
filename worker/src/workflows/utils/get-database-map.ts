@@ -1,13 +1,15 @@
-import type { Databases } from "@/durable-objects/account-do";
+// Unused, I think? To delete.
 
-export const getDatabaseMap = (databaseIds: Databases) => {
-  // Build database IDs mapping for coordinated upsert
-  const databaseIdsMap: Record<string, string | undefined> = {};
-  Object.entries(databaseIds).forEach(([key, value]) => {
-    if (value?.pageId) {
-      databaseIdsMap[key] = value.pageId;
-    }
-  });
+// import type { Databases } from "@/durable-objects/account-do";
 
-  return databaseIdsMap;
-};
+// export const getDatabaseMap = (databaseIds: Databases) => {
+//   // Build database IDs mapping for coordinated upsert
+//   const databaseIdsMap: Record<string, string | undefined> = {};
+//   Object.entries(databaseIds).forEach(([key, value]) => {
+//     if (value?.pageId) {
+//       databaseIdsMap[key] = value.pageId;
+//     }
+//   });
+
+//   return databaseIdsMap;
+// };
