@@ -26,6 +26,7 @@ import { getPaymentIntentSchema } from "@/schemas/payment-intent";
 import { getCouponSchema } from "@/schemas/coupon";
 import { getDiscountSchema } from "@/schemas/discount";
 import { getCoordinator } from "@/upload-coordinator/utils";
+
 export const getNotionLink = async (c: AppContext) => {
   const notionAuthLink = `${c.env.BASE_URL}/auth/signin?account_id=${c.get(
     "stripeAccountId"

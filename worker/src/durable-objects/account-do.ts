@@ -231,8 +231,7 @@ export class AccountDurableObject extends DurableObject<Env> {
 
   async clearNotionPages(): Promise<void> {
     if (
-      !this.accountStatus?.stripeAccountId ||
-      !this.accountStatus?.stripeMode
+      !this.accountStatus
     ) {
       return;
     }

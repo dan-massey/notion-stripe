@@ -1,11 +1,9 @@
-import type {
-  AppContext,
-  StripeMode,
-} from "@/types";
+import type { AppContext, StripeMode } from "@/types";
 import type { WorkflowParams } from "@/workflows/webhook-workflow";
 import { ensureAccountDo } from "@/durable-objects/utils";
-import { getNotionToken } from "@/utils/stripe";
-
+import { deleteNotionToken, getNotionToken } from "@/utils/stripe";
+import { getCoordinator } from "@/upload-coordinator/utils";
+import { revokeToken } from "@/utils/notion-api";
 
 export const stripeWebhookHandler = async (c: AppContext) => {
   const modeFromUrl = c.req.param("mode") as StripeMode;
@@ -39,6 +37,43 @@ export const stripeWebhookHandler = async (c: AppContext) => {
 
   const accountStatus = await account.getStatus();
 
+  if (event.type === "account.application.deauthorized") {
+    // Cancel subscription
+    // Delete account DO
+    const stripe = c.get("stripe");
+    if (accountStatus?.subscription?.stripeSubscriptionId) {
+      await stripe.subscriptions.cancel(
+        accountStatus.subscription?.stripeSubscriptionId
+      );
+    }
+    const coordinator = getCoordinator({ env: c.env }, stripeAccountId);
+    await coordinator.clearAllMappings();
+    await account.deleteSubscription();
+    await account.clearNotionPages();
+    if (notionToken) {
+      try {
+        await revokeToken(c.env.NOTION_OAUTH_CLIENT_ID, c.env.NOTION_OAUTH_CLIENT_SECRET, notionToken);
+      } catch (e) {
+        console.log("Revoking token errored", e);
+      }
+     }
+    return c.json({ message: "Uninstall handled" });
+  }
+
+  if (event.type === "account.application.authorized") {
+    // Delete the notion token on first install to handle the case
+    // where the app has been previously installed, is then
+    // uninstalled and then is reinstalled: We can't delete the notion
+    // token from Stripe because we lose permissions before the
+    // uninstall event is delivered.
+    try {
+      await deleteNotionToken(c);
+    } catch (e) {
+      console.log("Error deleting notion token", e);
+    }
+    return c.json({ message: "Application installed" });
+  }
+
   // Check if we have a Notion token
   if (!notionToken) {
     console.warn("No Notion token available");
@@ -49,7 +84,6 @@ export const stripeWebhookHandler = async (c: AppContext) => {
     console.warn("No account status available");
     return c.json({ message: "No account status available" });
   }
-
 
   if (accountStatus.notionConnection?.databases) {
     const params: WorkflowParams = {
@@ -62,10 +96,11 @@ export const stripeWebhookHandler = async (c: AppContext) => {
       id: event.id,
       params: params,
     });
-    console.log(`[Webhook Handler] Inserted webhook workflow run ${insertWorkflow.id}`);
-      return c.json({ message: "Event processed successfully" });
+    console.log(
+      `[Webhook Handler] Inserted webhook workflow run ${insertWorkflow.id}`
+    );
+    return c.json({ message: "Event processed successfully" });
   } else {
-      return c.json({ message: "No databases set up" });
+    return c.json({ message: "No databases set up" });
   }
-
 };

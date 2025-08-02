@@ -60,6 +60,7 @@ export const deleteNotionToken = async (c: AppContext) => {
     );
     return notionSecret;
   } catch (e) {
+    console.log("Error deleting Notion token from Stripe", e);
     return null;
   }
 }
