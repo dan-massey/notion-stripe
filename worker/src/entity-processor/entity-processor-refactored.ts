@@ -5,9 +5,7 @@ import type {
   AccountDurableObject,
   Databases,
 } from "@/durable-objects/account-do";
-import type {
-  StripeTypeMap,
-} from "@/entity-processor/entity-config";
+import type { StripeTypeMap } from "@/entity-processor/entity-config";
 import { Stripe } from "stripe";
 import { getCoordinator } from "@/upload-coordinator/utils";
 import { ENTITY_REGISTRY } from "./entity-registry";
@@ -16,11 +14,10 @@ import {
   NotionSyncService,
   DependencyProcessor,
   DiscountProcessor,
-  InvoiceLineItemProcessor,
-  SubscriptionItemProcessor,
   type StepWrapper,
   type EntityDependencyProcessor,
 } from "./services";
+import { defaultStepWrapper } from "@/workflows/utils/default-step-wrapper";
 
 interface ProcessingContext {
   stripeAccountId: string;
@@ -71,14 +68,17 @@ export class EntityProcessor implements EntityDependencyProcessor {
     entityType: K,
     entityId: string,
     databases: Databases,
-    stepWrapper?: StepWrapper,
+    stepWrapper: StepWrapper = defaultStepWrapper,
     options: ProcessingOptions = {}
-  ): Promise<{ pageId: string | undefined; expandedEntity: StripeTypeMap[K] | undefined }> {
+  ): Promise<{
+    pageId: string | undefined;
+    expandedEntity: StripeTypeMap[K] | undefined;
+  }> {
     const {
       skipSubEntities = false,
       skipDiscounts = false,
       forceUpdate = false,
-      isForDependencyResolution = false
+      isForDependencyResolution = false,
     } = options;
 
     const config = ENTITY_REGISTRY[entityType];
@@ -91,15 +91,26 @@ export class EntityProcessor implements EntityDependencyProcessor {
     }
 
     if (this.entityCache.isProcessed(entityType, entityId)) {
-      console.log(`♻️ Entity ${entityType}:${entityId} already processed in this session, skipping full processing`);
+      console.log(
+        `♻️ Entity ${entityType}:${entityId} already processed in this session, skipping full processing`
+      );
       const handlerContext = this.createHandlerContext();
-      const coordinator = getCoordinator(handlerContext, handlerContext.stripeAccountId);
-      
+      const coordinator = getCoordinator(
+        handlerContext,
+        handlerContext.stripeAccountId
+      );
+
       try {
-        const mapping = await coordinator.getEntityMapping(entityType, entityId);
+        const mapping = await coordinator.getEntityMapping(
+          entityType,
+          entityId
+        );
         return { pageId: mapping?.notionPageId, expandedEntity: undefined };
       } catch (error) {
-        console.warn(`Failed to get cached page ID for ${entityType}:${entityId}:`, error);
+        console.warn(
+          `Failed to get cached page ID for ${entityType}:${entityId}:`,
+          error
+        );
         return { pageId: undefined, expandedEntity: undefined };
       }
     }
@@ -107,27 +118,21 @@ export class EntityProcessor implements EntityDependencyProcessor {
     this.entityCache.markProcessed(entityType, entityId);
 
     const handlerContext = this.createHandlerContext();
-    let expandedEntity: StripeTypeMap[K];
-    if (stepWrapper) {
-      expandedEntity = await stepWrapper(
-        `Retrieve ${entityType} ${entityId} from Stripe API`,
-        async () => {
-          return await config.retrieveFromStripe(handlerContext, entityId);
-        }
-      );
-    } else {
-      expandedEntity = await config.retrieveFromStripe(
-        handlerContext,
-        entityId
-      );
-    }
 
-    const dependencyPageIds = await this.dependencyProcessor.resolveDependencies(
-      entityType,
-      expandedEntity,
-      databases,
-      stepWrapper
+    const expandedEntity: StripeTypeMap[K] = await stepWrapper(
+      `Retrieve ${entityType} ${entityId} from Stripe API`,
+      async () => {
+        return await config.retrieveFromStripe(handlerContext, entityId);
+      }
     );
+
+    const dependencyPageIds =
+      await this.dependencyProcessor.resolveDependencies(
+        entityType,
+        expandedEntity,
+        databases,
+        stepWrapper
+      );
 
     const syncResult = await this.notionSyncService.syncEntity(
       entityType,
@@ -146,7 +151,10 @@ export class EntityProcessor implements EntityDependencyProcessor {
     }
 
     if (!skipSubEntities) {
-      const subEntityProcessor = config.getSubEntityProcessor?.(handlerContext, this.dependencyProcessor);
+      const subEntityProcessor = config.getSubEntityProcessor?.(
+        handlerContext,
+        this.dependencyProcessor
+      );
       if (subEntityProcessor) {
         await subEntityProcessor.processSubEntities(
           expandedEntity,
@@ -157,11 +165,13 @@ export class EntityProcessor implements EntityDependencyProcessor {
       }
     }
 
-    if (!skipDiscounts && 
-        (entityType === "customer" ||
-         entityType === "invoice" ||
-         entityType === "subscription" ||
-         entityType === "invoiceitem")) {
+    if (
+      !skipDiscounts &&
+      (entityType === "customer" ||
+        entityType === "invoice" ||
+        entityType === "subscription" ||
+        entityType === "invoiceitem")
+    ) {
       await this.discountProcessor.processEntityDiscount(
         expandedEntity,
         entityType,
@@ -180,7 +190,7 @@ export class EntityProcessor implements EntityDependencyProcessor {
     stepWrapper?: StepWrapper
   ): Promise<ProcessingResult> {
     this.resetCounter();
-    
+
     if (!databases.discount?.pageId) {
       console.warn("Discount database ID not available");
       return {
@@ -188,7 +198,12 @@ export class EntityProcessor implements EntityDependencyProcessor {
       };
     }
 
-    await this.discountProcessor.processDiscount(discountObject, databases, {}, stepWrapper);
+    await this.discountProcessor.processDiscount(
+      discountObject,
+      databases,
+      {},
+      stepWrapper
+    );
 
     return {
       notionPageId: undefined,
@@ -246,8 +261,13 @@ export class EntityProcessor implements EntityDependencyProcessor {
 
     const entityCache = new EntityCache();
     const notionSyncService = new NotionSyncService(handlerContext);
-    const dependencyProcessor = new DependencyProcessor({} as EntityDependencyProcessor);
-    const discountProcessor = new DiscountProcessor(handlerContext, dependencyProcessor);
+    const dependencyProcessor = new DependencyProcessor(
+      {} as EntityDependencyProcessor
+    );
+    const discountProcessor = new DiscountProcessor(
+      handlerContext,
+      dependencyProcessor
+    );
 
     const entityProcessor = new EntityProcessor(
       context,
@@ -256,7 +276,7 @@ export class EntityProcessor implements EntityDependencyProcessor {
       dependencyProcessor,
       discountProcessor
     );
-    
+
     dependencyProcessor.entityProcessor = entityProcessor;
 
     return entityProcessor;
@@ -272,22 +292,27 @@ export class EntityProcessor implements EntityDependencyProcessor {
     };
 
     const handlerContext = {
-        stripeAccountId: params.stripeAccountId,
-        notionToken: params.notionToken,
-        stripe: params.stripe,
-        account: params.accountStub,
-        env: {
-            STRIPE_ENTITY_COORDINATOR: params.coordinatorNamespace,
-        } as Pick<
-            HandlerContext["env"],
-            "STRIPE_ENTITY_COORDINATOR"
-        > as HandlerContext["env"],
+      stripeAccountId: params.stripeAccountId,
+      notionToken: params.notionToken,
+      stripe: params.stripe,
+      account: params.accountStub,
+      env: {
+        STRIPE_ENTITY_COORDINATOR: params.coordinatorNamespace,
+      } as Pick<
+        HandlerContext["env"],
+        "STRIPE_ENTITY_COORDINATOR"
+      > as HandlerContext["env"],
     };
 
     const entityCache = new EntityCache();
     const notionSyncService = new NotionSyncService(handlerContext);
-    const dependencyProcessor = new DependencyProcessor({} as EntityDependencyProcessor);
-    const discountProcessor = new DiscountProcessor(handlerContext, dependencyProcessor);
+    const dependencyProcessor = new DependencyProcessor(
+      {} as EntityDependencyProcessor
+    );
+    const discountProcessor = new DiscountProcessor(
+      handlerContext,
+      dependencyProcessor
+    );
 
     const entityProcessor = new EntityProcessor(
       context,

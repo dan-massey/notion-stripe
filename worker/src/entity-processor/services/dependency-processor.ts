@@ -3,6 +3,7 @@ import type { Databases } from "@/durable-objects/account-do";
 import type { StripeTypeMap } from "@/entity-processor/entity-config";
 import type { StepWrapper } from "./notion-sync-service";
 import { ENTITY_REGISTRY } from "../entity-registry";
+import { defaultStepWrapper } from "@/workflows/utils/default-step-wrapper";
 
 /**
  * Interface for processing entity dependencies
@@ -12,9 +13,12 @@ export interface EntityDependencyProcessor {
     entityType: K,
     entityId: string,
     databases: Databases,
-    stepWrapper?: StepWrapper,
+    stepWrapper: StepWrapper,
     options?: { isForDependencyResolution?: boolean }
-  ): Promise<{ pageId: string | undefined; expandedEntity: StripeTypeMap[K] | undefined }>;
+  ): Promise<{
+    pageId: string | undefined;
+    expandedEntity: StripeTypeMap[K] | undefined;
+  }>;
 }
 
 /**
@@ -23,9 +27,7 @@ export interface EntityDependencyProcessor {
 export class DependencyProcessor {
   public entityProcessor: EntityDependencyProcessor;
 
-  constructor(
-    entityProcessor: EntityDependencyProcessor
-  ) {
+  constructor(entityProcessor: EntityDependencyProcessor) {
     this.entityProcessor = entityProcessor;
   }
 
@@ -36,7 +38,7 @@ export class DependencyProcessor {
     entityType: K,
     expandedEntity: StripeTypeMap[K],
     databases: Databases,
-    stepWrapper?: StepWrapper
+    stepWrapper: StepWrapper = defaultStepWrapper
   ): Promise<Record<string, string | null>> {
     const config = ENTITY_REGISTRY[entityType];
     if (!config || config.dependencies.length === 0) {
@@ -103,16 +105,12 @@ export class DependencyProcessor {
         }
       };
 
-      if (stepWrapper) {
-        await stepWrapper(
-          `Process dependency ${index + 1}/${
-            config.dependencies.length
-          }: ${depEntityType}`,
-          processDependencyStep
-        );
-      } else {
-        await processDependencyStep();
-      }
+      await stepWrapper(
+        `Process dependency ${index + 1}/${
+          config.dependencies.length
+        }: ${depEntityType}`,
+        processDependencyStep
+      );
     }
 
     console.log(
@@ -135,7 +133,9 @@ export class DependencyProcessor {
       return null;
     }
 
-    const dependency = config.dependencies.find(d => d.entityType === dependencyEntityType);
+    const dependency = config.dependencies.find(
+      (d) => d.entityType === dependencyEntityType
+    );
     if (!dependency) {
       return null;
     }
@@ -143,7 +143,10 @@ export class DependencyProcessor {
     try {
       return dependency.extractStripeId(expandedEntity);
     } catch (error) {
-      console.error(`Failed to extract Stripe ID for ${dependencyEntityType}:`, error);
+      console.error(
+        `Failed to extract Stripe ID for ${dependencyEntityType}:`,
+        error
+      );
       return null;
     }
   }

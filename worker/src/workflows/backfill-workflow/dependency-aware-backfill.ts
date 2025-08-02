@@ -22,7 +22,6 @@ export class DependencyAwareBackfillWorkflow extends WorkflowEntrypoint<
   CloudflareBindings,
   WorkflowParams
 > {
-
   async run(event: WorkflowEvent<WorkflowParams>, step: WorkflowStep) {
     const entityToBackfill = await step.do(
       "Determine entity to backfill",
@@ -57,7 +56,6 @@ export class DependencyAwareBackfillWorkflow extends WorkflowEntrypoint<
         );
       }
     );
-    let entitiesProcessed = 0;
 
     if (!stripeListResults.data.length) {
       // No more entities of this type, mark as completed and continue
@@ -75,8 +73,7 @@ export class DependencyAwareBackfillWorkflow extends WorkflowEntrypoint<
         const newParams: WorkflowParams = { ...event.payload };
         newParams.entityStatus[entityToBackfill].started = true;
         newParams.entityStatus[entityToBackfill].completed = true;
-        newParams.entitiesProcessed =
-          event.payload.entitiesProcessed + entitiesProcessed;
+        newParams.entitiesProcessed = event.payload.entitiesProcessed;
         if (!newParams.firstWorkflowId) {
           newParams.firstWorkflowId = event.instanceId;
         }
@@ -111,28 +108,30 @@ export class DependencyAwareBackfillWorkflow extends WorkflowEntrypoint<
       return;
     }
 
-    const mainEntityData = stripeListResults.data[0];
-    const stripe = getStripe(this.env, event.payload.stripeMode);
-
-    const accountStub = getAccountStub(this.env, event.payload.stripeAccountId)
-
-    // Create EntityProcessor with step wrapper
-    const entityProcessor = EntityProcessor.fromWorkflow({
-      stripeAccountId: event.payload.stripeAccountId,
-      notionToken,
-      coordinatorNamespace: this.env.STRIPE_ENTITY_COORDINATOR,
-      stripe,
-      accountStub,
-    });
-
-    // Create step wrapper function for EntityProcessor
-    const stepWrapper = (name: string, fn: () => Promise<any>) =>
-      step.do(name, fn);
-
     // Process the main entity with all its sub-entities using EntityProcessor
-    await step.do(
-      `Process entity with sub-entities: ${entityToBackfill} ${mainEntityData.id}`,
+    const newEntitiesProcessed = await step.do(
+      `Process entity with sub-entities: ${entityToBackfill} ${stripeListResults.data[0].id}`,
       async () => {
+        const mainEntityData = stripeListResults.data[0];
+        const stripe = getStripe(this.env, event.payload.stripeMode);
+
+        const accountStub = getAccountStub(
+          this.env,
+          event.payload.stripeAccountId
+        );
+
+        // Create EntityProcessor with step wrapper
+        const entityProcessor = EntityProcessor.fromWorkflow({
+          stripeAccountId: event.payload.stripeAccountId,
+          notionToken,
+          coordinatorNamespace: this.env.STRIPE_ENTITY_COORDINATOR,
+          stripe,
+          accountStub,
+        });
+
+        // Create step wrapper function for EntityProcessor
+        const stepWrapper = (name: string, fn: () => Promise<any>) =>
+          step.do(name, fn);
         if (!mainEntityData.id) {
           return null;
         }
@@ -145,7 +144,7 @@ export class DependencyAwareBackfillWorkflow extends WorkflowEntrypoint<
         );
 
         // Count the main entity (sub-entities are counted within their respective steps)
-        entitiesProcessed = entitiesProcessed + entityProcessor.getEntitiesProcessedCount();
+        return entityProcessor.getEntitiesProcessedCount();
       }
     );
 
@@ -154,7 +153,7 @@ export class DependencyAwareBackfillWorkflow extends WorkflowEntrypoint<
         this.env.BACKFILL_KV,
         event.payload.stripeMode,
         event.payload.stripeAccountId,
-        event.payload.entitiesProcessed + entitiesProcessed,
+        event.payload.entitiesProcessed + (newEntitiesProcessed ?? 0),
         entityToBackfill
       );
     });
@@ -167,7 +166,8 @@ export class DependencyAwareBackfillWorkflow extends WorkflowEntrypoint<
         stripeHasMore: stripeListResults.has_more,
         stripeDataLength: stripeListResults.data.length,
         firstEntityId: stripeListResults.data[0]?.id,
-        entitiesProcessed: event.payload.entitiesProcessed + entitiesProcessed,
+        entitiesProcessed:
+          event.payload.entitiesProcessed + (newEntitiesProcessed ?? 0),
       };
     });
 
@@ -177,7 +177,7 @@ export class DependencyAwareBackfillWorkflow extends WorkflowEntrypoint<
       newParams.entityStatus[entityToBackfill].completed =
         !stripeListResults.has_more;
       newParams.entitiesProcessed =
-        event.payload.entitiesProcessed + entitiesProcessed;
+        event.payload.entitiesProcessed + (newEntitiesProcessed ?? 0);
 
       if (stripeListResults.data.length > 0) {
         const lastIdInResult =

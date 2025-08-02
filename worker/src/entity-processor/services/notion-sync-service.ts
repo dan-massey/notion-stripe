@@ -4,6 +4,7 @@ import type { Databases } from "@/durable-objects/account-do";
 import type { StripeTypeMap } from "@/entity-processor/entity-config";
 import { coordinatedUpsert } from "@/upload-coordinator";
 import { ENTITY_REGISTRY } from "../entity-registry";
+import { defaultStepWrapper } from "@/workflows/utils/default-step-wrapper";
 
 export type StepWrapper = <T>(name: string, fn: () => Promise<T>) => Promise<T>;
 
@@ -30,7 +31,7 @@ export class NotionSyncService {
     entityId: string,
     databases: Databases,
     dependencyPageIds: Record<string, string | null> = {},
-    stepWrapper?: StepWrapper,
+    stepWrapper: StepWrapper = defaultStepWrapper,
     forceUpdate: boolean = false,
     preRetrievedEntity?: StripeTypeMap[K]
   ): Promise<SyncResult> {
@@ -39,7 +40,7 @@ export class NotionSyncService {
       if (!databases[entityType].pageId) {
         return {
           success: false,
-          error: `Database for ${entityType} not found`
+          error: `Database for ${entityType} not found`,
         };
       }
 
@@ -47,53 +48,65 @@ export class NotionSyncService {
       if (!config) {
         return {
           success: false,
-          error: `No configuration found for entity type: ${entityType}`
+          error: `No configuration found for entity type: ${entityType}`,
         };
       }
 
       // Get the entity data
-      const expandedEntity = await this.getEntityData(
-        entityType, 
-        entityId, 
-        config, 
-        preRetrievedEntity, 
-        stepWrapper
+      const expandedEntity = await stepWrapper(
+        `Get expanded entity ${entityType} ${entityId} from cache or Stripe API`,
+        async () => {
+          return await this.getEntityData(
+            entityType,
+            entityId,
+            config,
+            preRetrievedEntity
+          );
+        }
       );
 
       // Convert to Notion properties
-      const notionProperties = config.convertToNotionProperties(
-        expandedEntity,
-        dependencyPageIds
+      const notionProperties = await stepWrapper(
+        `Convert expanded entity to notion properties ${expandedEntity.object} ${expandedEntity.id}`,
+        async () => {
+          return config.convertToNotionProperties(
+            expandedEntity,
+            dependencyPageIds
+          );
+        }
       );
 
       // Perform the coordinated upsert
-      const notionPageId = await this.upsertToNotion(
-        entityType,
-        entityId,
-        databases[entityType].pageId!,
-        notionProperties,
-        forceUpdate,
-        stepWrapper
+      const notionPageId = await stepWrapper(
+        `Upsert to Notion ${entityType} ${entityId}`,
+        async () => {
+          return await this.upsertToNotion(
+            entityType,
+            entityId,
+            databases[entityType].pageId!,
+            notionProperties,
+            forceUpdate
+          );
+        }
       );
 
       if (notionPageId) {
         console.log(`✅ Successfully synced ${entityType} ${entityId}`);
         return {
           notionPageId,
-          success: true
+          success: true,
         };
       }
 
       return {
         success: false,
-        error: `Failed to upsert ${entityType} to Notion`
+        error: `Failed to upsert ${entityType} to Notion`,
       };
-
     } catch (error) {
       console.error(`❌ Failed to sync ${entityType} ${entityId}:`, error);
       return {
         success: false,
-        error: error instanceof Error ? error.message : 'Unknown error'
+        error: error instanceof Error ? error.message : "Unknown error",
       };
     }
   }
@@ -105,23 +118,13 @@ export class NotionSyncService {
     entityType: K,
     entityId: string,
     config: any,
-    preRetrievedEntity?: StripeTypeMap[K],
-    stepWrapper?: StepWrapper
+    preRetrievedEntity?: StripeTypeMap[K]
   ): Promise<StripeTypeMap[K]> {
     if (preRetrievedEntity) {
       return preRetrievedEntity;
     }
 
-    if (stepWrapper) {
-      return await stepWrapper(
-        `Retrieve ${entityType} ${entityId} from Stripe API`,
-        async () => {
-          return await config.retrieveFromStripe(this.handlerContext, entityId);
-        }
-      );
-    } else {
-      return await config.retrieveFromStripe(this.handlerContext, entityId);
-    }
+    return await config.retrieveFromStripe(this.handlerContext, entityId);
   }
 
   /**
@@ -132,32 +135,15 @@ export class NotionSyncService {
     entityId: string,
     databaseId: string,
     notionProperties: any,
-    forceUpdate: boolean,
-    stepWrapper?: StepWrapper
+    forceUpdate: boolean
   ): Promise<string | undefined> {
-    if (stepWrapper) {
-      return await stepWrapper(
-        `Upsert ${entityType} ${entityId} to Notion`,
-        async () => {
-          return await coordinatedUpsert(
-            this.handlerContext,
-            entityType,
-            entityId,
-            databaseId,
-            notionProperties,
-            forceUpdate
-          );
-        }
-      );
-    } else {
-      return await coordinatedUpsert(
-        this.handlerContext,
-        entityType,
-        entityId,
-        databaseId,
-        notionProperties,
-        forceUpdate
-      );
-    }
+    return await coordinatedUpsert(
+      this.handlerContext,
+      entityType,
+      entityId,
+      databaseId,
+      notionProperties,
+      forceUpdate
+    );
   }
 }

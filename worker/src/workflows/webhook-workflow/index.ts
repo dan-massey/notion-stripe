@@ -84,66 +84,73 @@ export class WebhookEventWorkflow extends WorkflowEntrypoint<
       return;
     }
 
-    const stripeEvent = event.payload.stripeEvent;
-    const eventType = stripeEvent.type;
-    const objectType = stripeEvent.data.object.object;
-    const stripeAccountId = event.payload.stripeAccountId;
-
-    console.log(
-      `Processing ${eventType} / ${objectType} event for account ${stripeAccountId}`
-    );
-
-    const stripeObject: ApiStripeObject | undefined = await step.do(
+    const validatedObject = await step.do(
       "Validate this is a supported object type",
       async () => {
+        const stripeEvent = event.payload.stripeEvent;
+        const eventType = stripeEvent.type;
+        const objectType = stripeEvent.data.object.object;
+        const stripeAccountId = event.payload.stripeAccountId;
+
+        console.log(
+          `Processing ${eventType} / ${objectType} event for account ${stripeAccountId}`
+        );
+
         if (!isSupportedObjectType(objectType)) {
-          return;
+          return { stripeObject: null, eventType, objectType, stripeAccountId };
         }
-        return stripeEvent.data.object as ApiStripeObject;
+        return {
+          stripeObject: stripeEvent.data.object as ApiStripeObject,
+          eventType,
+          objectType,
+          stripeAccountId,
+        };
       }
     );
 
-    if (!stripeObject) {
+    if (!validatedObject.stripeObject) {
       step.do(
-        `[Webhook Workflow] Unsupported object type ${objectType}`,
+        `[Webhook Workflow] Unsupported object type ${validatedObject.objectType}`,
         async () => {
           console.log(
-            `[Webhook Workflow] Unsupported object type ${objectType}`
+            `[Webhook Workflow] Unsupported object type ${validatedObject.objectType}`
           );
         }
       );
       return;
     }
 
-    if (!stripeObject.id) {
+    if (!validatedObject.stripeObject.id) {
       step.do(
-        `[Webhook Workflow] Object ${objectType} missing ID`,
+        `[Webhook Workflow] Object ${validatedObject.objectType} missing ID`,
         async () => {
-          console.log(`[Webhook Workflow] Object ${objectType} missing ID`);
+          console.log(
+            `[Webhook Workflow] Object ${validatedObject.objectType} missing ID`
+          );
         }
       );
 
       return;
     }
 
-    const stripe = getStripe(this.env, event.payload.stripeMode);
-    const entityProcessor = EntityProcessor.fromWorkflow({
-      stripeAccountId: event.payload.stripeAccountId,
-      notionToken,
-      coordinatorNamespace: this.env.STRIPE_ENTITY_COORDINATOR,
-      stripe,
-      accountStub,
-    });
-
-    const stepWrapper = (name: string, fn: () => Promise<any>) =>
-      step.do(name, fn);
-
-    if (objectType === "discount") {
+    if (validatedObject.objectType === "discount") {
       await step.do(
-        `Process discount: ${eventType} ${stripeObject.id}`,
+        `Process discount: ${validatedObject.eventType} ${validatedObject.stripeObject.id}`,
         async () => {
+          const stripe = getStripe(this.env, event.payload.stripeMode);
+          const entityProcessor = EntityProcessor.fromWorkflow({
+            stripeAccountId: event.payload.stripeAccountId,
+            notionToken,
+            coordinatorNamespace: this.env.STRIPE_ENTITY_COORDINATOR,
+            stripe,
+            accountStub,
+          });
+
+          const stepWrapper = (name: string, fn: () => Promise<any>) =>
+            step.do(name, fn);
+
           await entityProcessor.processDiscountEvent(
-            stripeObject as Stripe.Discount,
+            validatedObject.stripeObject as Stripe.Discount,
             event.payload.databases,
             stepWrapper
           );
@@ -154,14 +161,25 @@ export class WebhookEventWorkflow extends WorkflowEntrypoint<
 
     // Process the main entity with all its sub-entities using EntityProcessor
     await step.do(
-      `Process event with sub-entities: ${eventType} ${stripeObject.id}`,
+      `Process event with sub-entities: ${validatedObject.eventType} ${validatedObject.stripeObject.id}`,
       async () => {
-        if (!stripeObject.id) {
+        if (!validatedObject.stripeObject.id) {
           return null;
         }
+        const stripe = getStripe(this.env, event.payload.stripeMode);
+        const entityProcessor = EntityProcessor.fromWorkflow({
+          stripeAccountId: event.payload.stripeAccountId,
+          notionToken,
+          coordinatorNamespace: this.env.STRIPE_ENTITY_COORDINATOR,
+          stripe,
+          accountStub,
+        });
+
+        const stepWrapper = (name: string, fn: () => Promise<any>) =>
+          step.do(name, fn);
         await entityProcessor.processEntityComplete(
-          objectType as DatabaseEntity,
-          stripeObject.id,
+          validatedObject.objectType as DatabaseEntity,
+          validatedObject.stripeObject.id,
           event.payload.databases,
           stepWrapper
         );

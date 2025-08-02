@@ -6,6 +6,7 @@ import type { StepWrapper } from "./notion-sync-service";
 import type { DependencyProcessor } from "./dependency-processor";
 import { coordinatedUpsert } from "@/upload-coordinator";
 import { ENTITY_REGISTRY } from "../entity-registry";
+import { defaultStepWrapper } from "@/workflows/utils/default-step-wrapper";
 
 /**
  * Service for processing Stripe discounts
@@ -36,7 +37,7 @@ export class DiscountProcessor {
     discountObject: StripeTypeMap["discount"],
     databases: Databases,
     relationPageIds: Record<string, string> = {},
-    stepWrapper?: StepWrapper
+    stepWrapper: StepWrapper = defaultStepWrapper
   ): Promise<void> {
     const processDiscountDirect = async () => {
       console.log(`💰 Processing discount ${discountObject.id}`);
@@ -50,16 +51,17 @@ export class DiscountProcessor {
       try {
         console.log(`Processing discount ${discountObject.id}`);
 
-        // Resolve dependencies for the discount
-        const dependencyPageIds = await this.dependencyProcessor.resolveDependencies(
-          "discount",
-          discountObject,
-          databases,
-          stepWrapper
+        const dependencyPageIds = await stepWrapper(
+          `Resolve dependencies for discount ${discountObject.id}`,
+          async () => {
+            return await this.dependencyProcessor.resolveDependencies(
+              "discount",
+              discountObject,
+              databases,
+              stepWrapper
+            );
+          }
         );
-
-        // Merge in any relation page IDs that were passed in
-        Object.assign(dependencyPageIds, relationPageIds);
 
         // Convert to Notion properties
         const config = ENTITY_REGISTRY.discount;
@@ -70,51 +72,40 @@ export class DiscountProcessor {
 
         // Upsert the discount
         const discountId: string = discountObject.id;
-        let result: string | undefined;
-        if (stepWrapper) {
-          result = await stepWrapper(
-            `Uploading discount ${discountObject.id} to Notion ${discountDatabaseId}`,
-            async () => {
-              return await coordinatedUpsert(
-                this.handlerContext,
-                "discount",
-                discountId,
-                discountDatabaseId,
-                notionProperties,
-                true // force update
-              );
-            }
-          );
-        } else {
-          result = await coordinatedUpsert(
-            this.handlerContext,
-            "discount",
-            discountId,
-            discountDatabaseId,
-            notionProperties,
-            true // force update
-          );
-        }
+        const result = await stepWrapper(
+          `Uploading discount ${discountObject.id} to Notion ${discountDatabaseId}`,
+          async () => {
+            return await coordinatedUpsert(
+              this.handlerContext,
+              "discount",
+              discountId,
+              discountDatabaseId,
+              notionProperties,
+              true // force update
+            );
+          }
+        );
 
         if (result) {
-          console.log(`✅ Successfully processed discount ${discountObject.id}`);
+          console.log(
+            `✅ Successfully processed discount ${discountObject.id}`
+          );
         }
       } catch (error) {
-        console.error(`❌ Failed to process discount ${discountObject.id}:`, error);
+        console.error(
+          `❌ Failed to process discount ${discountObject.id}:`,
+          error
+        );
         // Don't throw - discount processing shouldn't block the main entity
       }
 
       console.log(`🏁 Finished processing discount ${discountObject.id}`);
     };
 
-    if (stepWrapper) {
-      await stepWrapper(
-        `Process discount ${discountObject.id}`,
-        processDiscountDirect
-      );
-    } else {
-      await processDiscountDirect();
-    }
+    await stepWrapper(
+      `Process discount ${discountObject.id}`,
+      processDiscountDirect
+    );
   }
 
   /**
@@ -125,11 +116,11 @@ export class DiscountProcessor {
     entityType: "customer" | "invoice" | "subscription" | "invoiceitem",
     databases: Databases,
     entityNotionPageId: string,
-    stepWrapper?: StepWrapper
+    stepWrapper: StepWrapper = defaultStepWrapper
   ): Promise<void> {
     // Extract discount from the entity
     const discountObject = this.extractDiscountFromEntity(entity, entityType);
-    
+
     if (!discountObject) {
       console.log(`No discount found for ${entityType} ${entity.id}`);
       return;
@@ -142,6 +133,11 @@ export class DiscountProcessor {
     relationPageIds[entityType] = entityNotionPageId;
 
     // Process the discount using the processDiscount method
-    await this.processDiscount(discountObject, databases, relationPageIds, stepWrapper);
+    await this.processDiscount(
+      discountObject,
+      databases,
+      relationPageIds,
+      stepWrapper
+    );
   }
 }

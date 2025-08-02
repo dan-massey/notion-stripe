@@ -7,20 +7,26 @@ import type { DependencyProcessor } from "./dependency-processor";
 import { coordinatedUpsert } from "@/upload-coordinator";
 import { ENTITY_REGISTRY } from "../entity-registry";
 import { Stripe } from "stripe";
+import { defaultStepWrapper } from "@/workflows/utils/default-step-wrapper";
 
 export interface ISubEntityProcessor {
   processSubEntities(
     parent: any,
     databases: Databases,
     parentNotionPageId: string,
-    stepWrapper?: StepWrapper
+    stepWrapper: StepWrapper
   ): Promise<void>;
 }
 
 /**
  * Abstract base class for processing sub-entities (child entities)
  */
-export abstract class SubEntityProcessor<TParent, TChild, TSubEntityType extends DatabaseEntity> implements ISubEntityProcessor {
+export abstract class SubEntityProcessor<
+  TParent,
+  TChild,
+  TSubEntityType extends DatabaseEntity
+> implements ISubEntityProcessor
+{
   constructor(
     protected handlerContext: HandlerContext,
     protected dependencyProcessor: DependencyProcessor
@@ -33,7 +39,7 @@ export abstract class SubEntityProcessor<TParent, TChild, TSubEntityType extends
     parent: TParent,
     databases: Databases,
     parentNotionPageId: string,
-    stepWrapper?: StepWrapper
+    stepWrapper: StepWrapper
   ): Promise<void>;
 
   /**
@@ -59,11 +65,11 @@ export abstract class SubEntityProcessor<TParent, TChild, TSubEntityType extends
     databases: Databases,
     parentNotionPageId: string,
     parentEntityType: string,
-    stepWrapper?: StepWrapper
+    stepWrapper: StepWrapper = defaultStepWrapper
   ): Promise<void> {
     const subEntityType = this.getSubEntityType();
     const subEntityId = (subEntity as { id: string }).id;
-    
+
     if (!subEntityId) {
       console.warn(`${subEntityType} ID is missing`);
       return;
@@ -73,12 +79,13 @@ export abstract class SubEntityProcessor<TParent, TChild, TSubEntityType extends
       console.log(`Processing ${subEntityType} ${subEntityId}`);
 
       // Resolve dependencies for the sub-entity
-      const dependencyPageIds = await this.dependencyProcessor.resolveDependencies(
-        subEntityType,
-        subEntity as StripeTypeMap[TSubEntityType],
-        databases,
-        stepWrapper
-      );
+      const dependencyPageIds =
+        await this.dependencyProcessor.resolveDependencies(
+          subEntityType,
+          subEntity as StripeTypeMap[TSubEntityType],
+          databases,
+          stepWrapper
+        );
 
       // Use the parent entity page ID for the parent relation
       dependencyPageIds[parentEntityType] = parentNotionPageId;
@@ -97,35 +104,29 @@ export abstract class SubEntityProcessor<TParent, TChild, TSubEntityType extends
         return;
       }
 
-      let result: string | undefined;
-      if (stepWrapper) {
-        result = await stepWrapper(
-          `Upsert ${subEntityType} ${subEntityId} to Notion DatabaseId ${databaseId}`,
-          async () => {
-            return await coordinatedUpsert(
-              this.handlerContext,
-              subEntityType,
-              subEntityId,
-              databaseId,
-              notionProperties
-            );
-          }
-        );
-      } else {
-        result = await coordinatedUpsert(
-          this.handlerContext,
-          subEntityType,
-          subEntityId,
-          databaseId,
-          notionProperties
-        );
-      }
+      const result: string | undefined = await stepWrapper(
+        `Upsert ${subEntityType} ${subEntityId} to Notion DatabaseId ${databaseId}`,
+        async () => {
+          return await coordinatedUpsert(
+            this.handlerContext,
+            subEntityType,
+            subEntityId,
+            databaseId,
+            notionProperties
+          );
+        }
+      );
 
       if (result) {
-        console.log(`✅ Successfully processed ${subEntityType} ${subEntityId}`);
+        console.log(
+          `✅ Successfully processed ${subEntityType} ${subEntityId}`
+        );
       }
     } catch (error) {
-      console.error(`❌ Failed to process ${subEntityType} ${subEntityId}:`, error);
+      console.error(
+        `❌ Failed to process ${subEntityType} ${subEntityId}:`,
+        error
+      );
       // Continue processing other sub-entities even if one fails
     }
   }
@@ -134,7 +135,11 @@ export abstract class SubEntityProcessor<TParent, TChild, TSubEntityType extends
 /**
  * Processor for invoice line items
  */
-export class InvoiceLineItemProcessor extends SubEntityProcessor<StripeTypeMap["invoice"], Stripe.InvoiceLineItem, "line_item"> {
+export class InvoiceLineItemProcessor extends SubEntityProcessor<
+  StripeTypeMap["invoice"],
+  Stripe.InvoiceLineItem,
+  "line_item"
+> {
   protected getSubEntityType(): "line_item" {
     return "line_item";
   }
@@ -143,7 +148,9 @@ export class InvoiceLineItemProcessor extends SubEntityProcessor<StripeTypeMap["
     return databases.line_item.pageId;
   }
 
-  protected getSubEntities(invoice: StripeTypeMap["invoice"]): Stripe.InvoiceLineItem[] {
+  protected getSubEntities(
+    invoice: StripeTypeMap["invoice"]
+  ): Stripe.InvoiceLineItem[] {
     return invoice.lines?.data || [];
   }
 
@@ -151,7 +158,7 @@ export class InvoiceLineItemProcessor extends SubEntityProcessor<StripeTypeMap["
     invoice: StripeTypeMap["invoice"],
     databases: Databases,
     invoiceNotionPageId: string,
-    stepWrapper?: StepWrapper
+    stepWrapper: StepWrapper = defaultStepWrapper
   ): Promise<void> {
     if (!invoice.id) {
       console.warn("Invoice ID is missing, cannot process line items");
@@ -184,34 +191,32 @@ export class InvoiceLineItemProcessor extends SubEntityProcessor<StripeTypeMap["
           );
         };
 
-        if (stepWrapper) {
-          await stepWrapper(
-            `Process line item ${index + 1}/${lineItems.length}: ${lineItem.id}`,
-            processLineItem
-          );
-        } else {
-          await processLineItem();
-        }
+        await stepWrapper(
+          `Process line item ${index + 1}/${lineItems.length}: ${lineItem.id}`,
+          processLineItem
+        );
       }
 
-      console.log(`🏁 Finished processing line items for invoice ${invoice.id}`);
+      console.log(
+        `🏁 Finished processing line items for invoice ${invoice.id}`
+      );
     };
 
-    if (stepWrapper) {
-      await stepWrapper(
-        `Process line items for invoice ${invoice.id}`,
-        processLineItems
-      );
-    } else {
-      await processLineItems();
-    }
+    await stepWrapper(
+      `Process line items for invoice ${invoice.id}`,
+      processLineItems
+    );
   }
 }
 
 /**
  * Processor for subscription items
  */
-export class SubscriptionItemProcessor extends SubEntityProcessor<StripeTypeMap["subscription"], Stripe.SubscriptionItem, "subscription_item"> {
+export class SubscriptionItemProcessor extends SubEntityProcessor<
+  StripeTypeMap["subscription"],
+  Stripe.SubscriptionItem,
+  "subscription_item"
+> {
   protected getSubEntityType(): "subscription_item" {
     return "subscription_item";
   }
@@ -220,7 +225,9 @@ export class SubscriptionItemProcessor extends SubEntityProcessor<StripeTypeMap[
     return databases.subscription_item?.pageId;
   }
 
-  protected getSubEntities(subscription: StripeTypeMap["subscription"]): Stripe.SubscriptionItem[] {
+  protected getSubEntities(
+    subscription: StripeTypeMap["subscription"]
+  ): Stripe.SubscriptionItem[] {
     return subscription.items?.data || [];
   }
 
@@ -228,20 +235,26 @@ export class SubscriptionItemProcessor extends SubEntityProcessor<StripeTypeMap[
     subscription: StripeTypeMap["subscription"],
     databases: Databases,
     subscriptionNotionPageId: string,
-    stepWrapper?: StepWrapper
+    stepWrapper: StepWrapper = defaultStepWrapper
   ): Promise<void> {
     if (!subscription.id) {
-      console.warn("Subscription ID is missing, cannot process subscription items");
+      console.warn(
+        "Subscription ID is missing, cannot process subscription items"
+      );
       return;
     }
 
     const processItems = async () => {
-      console.log(`🧾 Processing subscription items for subscription ${subscription.id}`);
+      console.log(
+        `🧾 Processing subscription items for subscription ${subscription.id}`
+      );
 
       const subscriptionItems = this.getSubEntities(subscription);
 
       if (!subscriptionItems.length) {
-        console.log(`No subscription items found for subscription ${subscription.id}`);
+        console.log(
+          `No subscription items found for subscription ${subscription.id}`
+        );
         return;
       }
 
@@ -261,26 +274,22 @@ export class SubscriptionItemProcessor extends SubEntityProcessor<StripeTypeMap[
           );
         };
 
-        if (stepWrapper) {
-          await stepWrapper(
-            `Process subscription item ${index + 1}/${subscriptionItems.length}: ${subscriptionItem.id}`,
-            processSubscriptionItem
-          );
-        } else {
-          await processSubscriptionItem();
-        }
+        await stepWrapper(
+          `Process subscription item ${index + 1}/${
+            subscriptionItems.length
+          }: ${subscriptionItem.id}`,
+          processSubscriptionItem
+        );
       }
 
-      console.log(`🏁 Finished processing subscription items for subscription ${subscription.id}`);
+      console.log(
+        `🏁 Finished processing subscription items for subscription ${subscription.id}`
+      );
     };
 
-    if (stepWrapper) {
-      await stepWrapper(
-        `Process subscription items for subscription ${subscription.id}`,
-        processItems
-      );
-    } else {
-      await processItems();
-    }
+    await stepWrapper(
+      `Process subscription items for subscription ${subscription.id}`,
+      processItems
+    );
   }
 }
