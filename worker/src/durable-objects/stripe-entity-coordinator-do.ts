@@ -67,6 +67,14 @@ export class StripeEntityCoordinator extends DurableObject {
     };
 
     await this.ctx.storage.put(key, mapping);
+    
+    // Schedule an alarm if none exists
+    const currentAlarm = await this.ctx.storage.getAlarm();
+    if (currentAlarm === null) {
+      const EXPIRY_MS = 1000 * 60 * 60 * 24 * 1; // 1 day
+      await this.ctx.storage.setAlarm(now + EXPIRY_MS);
+    } 
+    
     return mapping;
   }
 
@@ -129,24 +137,15 @@ export class StripeEntityCoordinator extends DurableObject {
       console.log(
         `[Durable Object] Existing hash for ${entityType} ${stripeId}. Skipping Notion upsert.`
       );
-      return await this.setEntityMapping(
-        entityType,
-        stripeId,
-        existingMapping.notionPageId,
-        updateHash
-      );
+      // Update the mapping to refresh the updatedAt timestamp
+      return await this.setEntityMapping(entityType, stripeId, existingMapping.notionPageId, updateHash);
     }
     
     if (existingMapping && !forceUpdate) {
       console.log(
         `[Durable Object] Existing mapping for ${entityType} ${stripeId}. No force update. Skipping Notion upsert.`
       );
-      return await this.setEntityMapping(
-        entityType,
-        stripeId,
-        existingMapping.notionPageId,
-        updateHash
-      );
+      return existingMapping;
     }
     
     const upsertResult = await upsertOperation();

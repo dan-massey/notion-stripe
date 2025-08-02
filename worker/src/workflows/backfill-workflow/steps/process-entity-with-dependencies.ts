@@ -21,8 +21,9 @@ export type EntityDependencyPlan = {
 /**
  * Analyzes a main entity and determines what dependencies need to be processed first
  * Returns a plan with dependency steps in the correct order
+ * Unused, interesting to keep as an example of topological sort.
  */
-export async function createEntityDependencyPlan(
+async function createEntityDependencyPlan(
   stripe: Stripe,
   mainEntityType: StripeApiObject,
   mainEntityData: DatabaseStripeObject,
@@ -126,32 +127,11 @@ export async function getNextEntityFromStripe(
     }
   }
 
-  switch (entityType) {
-    case 'customer':
-      return await stripe.customers.list(listOptions, requestOptions);
-    case 'product':
-      return await stripe.products.list(listOptions, requestOptions);
-    case 'price':
-      return await stripe.prices.list(listOptions, requestOptions);
-    case 'coupon':
-      return await stripe.coupons.list(listOptions, requestOptions);
-    case 'promotion_code':
-      return await stripe.promotionCodes.list(listOptions, requestOptions);
-    case 'payment_intent':
-      return await stripe.paymentIntents.list(listOptions, requestOptions);
-    case 'charge':
-      return await stripe.charges.list(listOptions, requestOptions);
-    case 'invoice':
-      return await stripe.invoices.list(listOptions, requestOptions);
-    case 'subscription':
-      return await stripe.subscriptions.list(listOptions, requestOptions);
-    case 'invoiceitem':
-      return await stripe.invoiceItems.list(listOptions, requestOptions);
-    case 'credit_note':
-      return await stripe.creditNotes.list(listOptions, requestOptions);
-    case 'dispute':
-      return await stripe.disputes.list(listOptions, requestOptions);
-    default:
-      throw new Error(`Unsupported entity type for listing: ${entityType}`);
+  const entityConfig = ENTITY_REGISTRY[entityType as DatabaseEntity];
+  if (!entityConfig || !entityConfig.listFromStripe) {
+    throw new Error(`Unsupported entity type for listing: ${entityType}`);
   }
+
+  const listFunction = entityConfig.listFromStripe(stripe);
+  return await listFunction(listOptions, requestOptions);
 }

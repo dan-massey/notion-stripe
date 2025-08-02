@@ -1,4 +1,4 @@
-import type { DatabaseEntity, DatabaseStripeObject } from "@/types";
+import type { DatabaseEntity } from "@/types";
 import type { HandlerContext } from "@/handlers/stripe/webhook/shared/types";
 import type { Stripe } from "stripe";
 import type { ISubEntityProcessor } from "./services/sub-entity-processor";
@@ -42,6 +42,8 @@ export interface EntityDependency {
 export interface EntityConfig<K extends DatabaseEntity> {
   /** The entity type this config is for */
   entityType: K;
+  /** Whether this entity supports list operations for backfilling */
+  isListable?: boolean;
   /** Stripe API expansion parameters needed to resolve dependencies */
   stripeExpansions: string[];
   /** List of entities this entity depends on */
@@ -53,6 +55,8 @@ export interface EntityConfig<K extends DatabaseEntity> {
     context: HandlerContext,
     stripeId: string
   ) => Promise<StripeTypeMap[K]>;
+  /** Stripe list function reference for backfill operations */
+  listFromStripe?: (stripe: Stripe) => (listOptions: any, requestOptions: Stripe.RequestOptions) => Promise<any>;
   /** Function to convert Stripe entity to Notion properties */
   convertToNotionProperties: (
     expandedEntity: StripeTypeMap[K],

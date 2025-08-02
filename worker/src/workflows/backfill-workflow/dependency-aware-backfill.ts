@@ -73,6 +73,7 @@ export class DependencyAwareBackfillWorkflow extends WorkflowEntrypoint<
 
       await step.do("start next workflow for next entity type", async () => {
         const newParams: WorkflowParams = { ...event.payload };
+        newParams.entityStatus[entityToBackfill].started = true;
         newParams.entityStatus[entityToBackfill].completed = true;
         newParams.entitiesProcessed =
           event.payload.entitiesProcessed + entitiesProcessed;

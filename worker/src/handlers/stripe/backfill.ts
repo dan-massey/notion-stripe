@@ -1,6 +1,7 @@
 import type { AppContext, StripeApiObject, BackfillTaskStatus } from "@/types";
 import { getStatus, setStatus } from "@/utils/backfill-status";
 import { WorkflowParams } from "@/workflows/backfill-workflow/types";
+import { validateBackfillEntitiesComplete } from "@/entity-processor/entity-registry";
 
 export const startBackfill = async (c: AppContext) => {
   const entities: Array<StripeApiObject> = [
@@ -17,6 +18,9 @@ export const startBackfill = async (c: AppContext) => {
     "promotion_code",
     "payment_intent"
   ];
+
+  // Validate that all listable entities are included
+  validateBackfillEntitiesComplete(entities);
 
   const statuses = Object.fromEntries(
     entities.map((entity) => [

@@ -41,6 +41,7 @@ export const ENTITY_REGISTRY: EntityConfigRegistry = {
   // Core entities with no dependencies
   customer: {
     entityType: "customer",
+    isListable: true,
     stripeExpansions: [
       "subscriptions",
       "sources",
@@ -62,6 +63,7 @@ export const ENTITY_REGISTRY: EntityConfigRegistry = {
       }
       return customer;
     },
+    listFromStripe: (stripe) => (listOptions, requestOptions) => stripe.customers.list(listOptions, requestOptions),
     convertToNotionProperties: (expandedEntity, dependencyPageIds) => {
       return stripeCustomerToNotionProperties(expandedEntity);
     },
@@ -69,6 +71,7 @@ export const ENTITY_REGISTRY: EntityConfigRegistry = {
 
   product: {
     entityType: "product",
+    isListable: true,
     stripeExpansions: [],
     dependencies: [],
     titleProperty: "Product ID",
@@ -79,6 +82,7 @@ export const ENTITY_REGISTRY: EntityConfigRegistry = {
         { stripeAccount: context.stripeAccountId }
       );
     },
+    listFromStripe: (stripe) => (listOptions, requestOptions) => stripe.products.list(listOptions, requestOptions),
     convertToNotionProperties: (expandedEntity, dependencyPageIds) => {
       return stripeProductToNotionProperties(expandedEntity);
     },
@@ -86,6 +90,7 @@ export const ENTITY_REGISTRY: EntityConfigRegistry = {
 
   coupon: {
     entityType: "coupon",
+    isListable: true,
     stripeExpansions: [],
     dependencies: [],
     titleProperty: "Coupon ID",
@@ -96,6 +101,7 @@ export const ENTITY_REGISTRY: EntityConfigRegistry = {
         { stripeAccount: context.stripeAccountId }
       );
     },
+    listFromStripe: (stripe) => (listOptions, requestOptions) => stripe.coupons.list(listOptions, requestOptions),
     convertToNotionProperties: (expandedEntity, dependencyPageIds) => {
       return stripeCouponToNotionProperties(expandedEntity);
     },
@@ -104,6 +110,7 @@ export const ENTITY_REGISTRY: EntityConfigRegistry = {
   // Level 1 dependencies
   payment_intent: {
     entityType: "payment_intent",
+    isListable: true,
     stripeExpansions: ["customer", "payment_method"],
     dependencies: [
       {
@@ -123,6 +130,7 @@ export const ENTITY_REGISTRY: EntityConfigRegistry = {
         { stripeAccount: context.stripeAccountId }
       );
     },
+    listFromStripe: (stripe) => (listOptions, requestOptions) => stripe.paymentIntents.list(listOptions, requestOptions),
     convertToNotionProperties: (expandedEntity, dependencyPageIds) => {
       return stripePaymentIntentToNotionProperties(
         expandedEntity,
@@ -133,6 +141,7 @@ export const ENTITY_REGISTRY: EntityConfigRegistry = {
 
   price: {
     entityType: "price",
+    isListable: true,
     stripeExpansions: ["product"],
     dependencies: [
       {
@@ -152,6 +161,7 @@ export const ENTITY_REGISTRY: EntityConfigRegistry = {
         { stripeAccount: context.stripeAccountId }
       );
     },
+    listFromStripe: (stripe) => (listOptions, requestOptions) => stripe.prices.list(listOptions, requestOptions),
     convertToNotionProperties: (expandedEntity, dependencyPageIds) => {
       return stripePriceToNotionProperties(
         expandedEntity,
@@ -162,6 +172,7 @@ export const ENTITY_REGISTRY: EntityConfigRegistry = {
 
   promotion_code: {
     entityType: "promotion_code",
+    isListable: true,
     stripeExpansions: ["coupon", "customer"],
     dependencies: [
       {
@@ -187,6 +198,7 @@ export const ENTITY_REGISTRY: EntityConfigRegistry = {
         { stripeAccount: context.stripeAccountId }
       );
     },
+    listFromStripe: (stripe) => (listOptions, requestOptions) => stripe.promotionCodes.list(listOptions, requestOptions),
     convertToNotionProperties: (expandedEntity, dependencyPageIds) => {
       return stripePromotionCodeToNotionProperties(
         expandedEntity,
@@ -199,6 +211,7 @@ export const ENTITY_REGISTRY: EntityConfigRegistry = {
   // Level 2 dependencies
   charge: {
     entityType: "charge",
+    isListable: true,
     stripeExpansions: ["customer", "payment_intent"],
     dependencies: [
       {
@@ -225,6 +238,7 @@ export const ENTITY_REGISTRY: EntityConfigRegistry = {
         { stripeAccount: context.stripeAccountId }
       );
     },
+    listFromStripe: (stripe) => (listOptions, requestOptions) => stripe.charges.list(listOptions, requestOptions),
     convertToNotionProperties: (expandedEntity, dependencyPageIds) => {
       return stripeChargeToNotionProperties(
         expandedEntity,
@@ -237,6 +251,7 @@ export const ENTITY_REGISTRY: EntityConfigRegistry = {
   // Level 3+ dependencies - more complex entities
   invoice: {
     entityType: "invoice",
+    isListable: true,
     stripeExpansions: [
       "customer",
       "subscription",
@@ -292,6 +307,7 @@ export const ENTITY_REGISTRY: EntityConfigRegistry = {
         { stripeAccount: context.stripeAccountId }
       );
     },
+    listFromStripe: (stripe) => (listOptions, requestOptions) => stripe.invoices.list(listOptions, requestOptions),
     convertToNotionProperties: (expandedEntity, dependencyPageIds) => {
       return stripeInvoiceToNotionProperties(
         expandedEntity,
@@ -308,6 +324,7 @@ export const ENTITY_REGISTRY: EntityConfigRegistry = {
 
   subscription: {
     entityType: "subscription",
+    isListable: true,
     stripeExpansions: [
       "customer",
       "latest_invoice",
@@ -365,6 +382,7 @@ export const ENTITY_REGISTRY: EntityConfigRegistry = {
         { stripeAccount: context.stripeAccountId }
       );
     },
+    listFromStripe: (stripe) => (listOptions, requestOptions) => stripe.subscriptions.list(listOptions, requestOptions),
     convertToNotionProperties: (expandedEntity, dependencyPageIds) => {
       return stripeSubscriptionToNotionProperties(
         expandedEntity,
@@ -427,6 +445,7 @@ export const ENTITY_REGISTRY: EntityConfigRegistry = {
 
   credit_note: {
     entityType: "credit_note",
+    isListable: true,
     stripeExpansions: ["customer", "invoice"],
     dependencies: [
       {
@@ -452,6 +471,7 @@ export const ENTITY_REGISTRY: EntityConfigRegistry = {
         { stripeAccount: context.stripeAccountId }
       );
     },
+    listFromStripe: (stripe) => (listOptions, requestOptions) => stripe.creditNotes.list(listOptions, requestOptions),
     convertToNotionProperties: (expandedEntity, dependencyPageIds) => {
       return stripeCreditNoteToNotionProperties(
         expandedEntity,
@@ -463,6 +483,7 @@ export const ENTITY_REGISTRY: EntityConfigRegistry = {
 
   dispute: {
     entityType: "dispute",
+    isListable: true,
     stripeExpansions: ["charge", "charge.payment_intent"],
     dependencies: [
       {
@@ -489,6 +510,7 @@ export const ENTITY_REGISTRY: EntityConfigRegistry = {
         { stripeAccount: context.stripeAccountId }
       );
     },
+    listFromStripe: (stripe) => (listOptions, requestOptions) => stripe.disputes.list(listOptions, requestOptions),
     convertToNotionProperties: (expandedEntity, dependencyPageIds) => {
       return stripeDisputeToNotionProperties(
         expandedEntity,
@@ -500,6 +522,7 @@ export const ENTITY_REGISTRY: EntityConfigRegistry = {
 
   invoiceitem: {
     entityType: "invoiceitem",
+    isListable: true,
     stripeExpansions: [
       "customer",
       "invoice",
@@ -538,6 +561,7 @@ export const ENTITY_REGISTRY: EntityConfigRegistry = {
         { stripeAccount: context.stripeAccountId }
       );
     },
+    listFromStripe: (stripe) => (listOptions, requestOptions) => stripe.invoiceItems.list(listOptions, requestOptions),
     convertToNotionProperties: (expandedEntity, dependencyPageIds) => {
       return stripeInvoiceItemToNotionProperties(
         expandedEntity,
@@ -695,3 +719,24 @@ export const ENTITY_REGISTRY: EntityConfigRegistry = {
     },
   },
 };
+
+/**
+ * Get all entity types that support list operations for backfilling
+ */
+export function getListableEntities(): Array<keyof typeof ENTITY_REGISTRY> {
+  return Object.keys(ENTITY_REGISTRY).filter(
+    (entityType) => ENTITY_REGISTRY[entityType as keyof typeof ENTITY_REGISTRY].isListable
+  ) as Array<keyof typeof ENTITY_REGISTRY>;
+}
+
+/**
+ * Validates that a given array of entities includes all listable entities from the registry
+ */
+export function validateBackfillEntitiesComplete(entities: Array<keyof typeof ENTITY_REGISTRY>): void {
+  const listableEntities = getListableEntities();
+  const missingEntities = listableEntities.filter(entity => !entities.includes(entity));
+  
+  if (missingEntities.length > 0) {
+    throw new Error(`Backfill entities array is missing listable entities: ${missingEntities.join(', ')}`);
+  }
+}
