@@ -24,7 +24,7 @@ export const stripeWebhookHandler = async (c: AppContext) => {
 
   const objectType = event?.data.object.object;
   console.log(
-    `Processing ${event.type} / ${objectType} event for account ${stripeAccountId}`
+    `[Webhook Handler]: Processing ${event.type} / ${objectType} event for account ${stripeAccountId}`
   );
 
   // Get required resources in parallel
@@ -52,9 +52,10 @@ export const stripeWebhookHandler = async (c: AppContext) => {
     await account.clearNotionPages();
     if (notionToken) {
       try {
+        console.log("[Webhook Handler]: Trying to revoke Notion Token");
         await revokeToken(c.env.NOTION_OAUTH_CLIENT_ID, c.env.NOTION_OAUTH_CLIENT_SECRET, notionToken);
       } catch (e) {
-        console.log("Revoking token errored", e);
+        console.log("[Webhook Handler]: Revoking token errored", e);
       }
      }
     return c.json({ message: "Uninstall handled" });

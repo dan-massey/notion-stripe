@@ -87,6 +87,7 @@ export const validateAuth = async (c: AppContext) => {
   let isAuthed: boolean = false;
   try {
     token = await getNotionToken(c, stripeAccountId);
+    console.log("[Validate Auth]: Retrieved Notion Token");
   } catch (error) {
     console.error("Error deleting Notion token:", error);
   }
@@ -101,6 +102,7 @@ export const validateAuth = async (c: AppContext) => {
       const body = (await tokenResp.json()) as OauthIntrospectResponse;
       if (tokenResp.status === 200 && body.active === true) {
         isAuthed = true;
+        console.log("[Validate Auth]: Validated Notion Token");
       }
     } catch (e) {
       // Don't do anything with the error.
