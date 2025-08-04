@@ -6,8 +6,7 @@ import {
   createNumberProperty,
   createSelectProperty,
   createDateProperty,
-  createRelationProperty,
-  stringFromObject,
+  createRelationProperty
 } from "@/converters/notion-properties";
 
 export function stripeInvoiceLineItemToNotionProperties(
@@ -47,7 +46,12 @@ export function stripeInvoiceLineItemToNotionProperties(
 
   // Handle pricing details from embedded pricing object
   if (lineItem.pricing?.unit_amount_decimal) {
-    properties["Unit Amount Excluding Tax"] = createRichTextProperty(lineItem.pricing.unit_amount_decimal);
+    properties["Unit Amount Decimal"] = createRichTextProperty(lineItem.pricing.unit_amount_decimal);
+  }
+  
+  // Handle product ID from pricing details
+  if (lineItem.pricing?.price_details?.product) {
+    properties["Product"] = createRichTextProperty(lineItem.pricing.price_details.product);
   }
 
   // Add relations if we have the Notion page IDs
@@ -84,19 +88,18 @@ export function stripeInvoiceLineItemToNotionProperties(
 
   // Handle taxes array
   const taxesCount = lineItem.taxes?.length || 0;
-  properties["Tax Amounts Count"] = createNumberProperty(taxesCount);
+  properties["Taxes Count"] = createNumberProperty(taxesCount);
   if (lineItem.taxes && lineItem.taxes.length > 0) {
-    const taxAmounts = lineItem.taxes.map(tax => 
-      `${tax.amount} (${tax.tax_behavior}, ${tax.taxability_reason})`
-    ).join(', ');
-    properties["Tax Amounts"] = createRichTextProperty(taxAmounts);
+    const taxes = lineItem.taxes.map(tax => {
+      const parts = [`Amount: ${tax.amount}`, `Behavior: ${tax.tax_behavior}`];
+      if (tax.taxability_reason) parts.push(`Reason: ${tax.taxability_reason}`);
+      if (tax.taxable_amount) parts.push(`Taxable: ${tax.taxable_amount}`);
+      return parts.join(', ');
+    }).join(' | ');
+    properties["Taxes"] = createRichTextProperty(taxes);
   } else {
-    properties["Tax Amounts"] = createRichTextProperty("");
+    properties["Taxes"] = createRichTextProperty("");
   }
-
-  // Tax rates are not directly available on line items, but we can track the count
-  properties["Tax Rates Count"] = createNumberProperty(taxesCount);
-  properties["Tax Rates"] = createRichTextProperty("");
 
   // Handle discount amounts
   const discountAmountsCount = lineItem.discount_amounts?.length || 0;
@@ -114,10 +117,27 @@ export function stripeInvoiceLineItemToNotionProperties(
   const discountsCount = lineItem.discounts?.length || 0;
   properties["Discounts Count"] = createNumberProperty(discountsCount);
   if (lineItem.discounts && lineItem.discounts.length > 0) {
-    const discounts = lineItem.discounts.join(', ');
+    const discounts = lineItem.discounts.map(discount => 
+      typeof discount === 'string' ? discount : discount.id || 'Unknown'
+    ).join(', ');
     properties["Discounts"] = createRichTextProperty(discounts);
   } else {
     properties["Discounts"] = createRichTextProperty("");
+  }
+
+  // Handle pretax credit amounts
+  const pretaxCreditAmountsCount = lineItem.pretax_credit_amounts?.length || 0;
+  properties["Pretax Credit Amounts Count"] = createNumberProperty(pretaxCreditAmountsCount);
+  if (lineItem.pretax_credit_amounts && lineItem.pretax_credit_amounts.length > 0) {
+    const pretaxCredits = lineItem.pretax_credit_amounts.map(credit => {
+      const parts = [`Amount: ${credit.amount}`, `Type: ${credit.type}`];
+      if (credit.credit_balance_transaction) parts.push(`Transaction: ${credit.credit_balance_transaction}`);
+      if (credit.discount) parts.push(`Discount: ${credit.discount}`);
+      return parts.join(', ');
+    }).join(' | ');
+    properties["Pretax Credit Amounts"] = createRichTextProperty(pretaxCredits);
+  } else {
+    properties["Pretax Credit Amounts"] = createRichTextProperty("");
   }
 
   return properties;

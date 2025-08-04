@@ -6,6 +6,7 @@ import {
   createNumberProperty,
   createDateProperty,
   createRelationProperty,
+  createSelectProperty,
   stringFromObject,
 } from "@/converters/notion-properties";
 
@@ -13,7 +14,9 @@ export function stripeInvoiceItemToNotionProperties(
   invoiceItem: Stripe.InvoiceItem, 
   customerNotionPageId: string | null, 
   invoiceNotionPageId: string | null,
-  priceNotionPageId: string | null
+  priceNotionPageId: string | null,
+  subscriptionNotionPageId: string | null = null,
+  subscriptionItemNotionPageId: string | null = null
 ) {
   const properties: Record<string, any> = {
     "Invoice Item ID": createTitleProperty(invoiceItem.id),
@@ -25,11 +28,7 @@ export function stripeInvoiceItemToNotionProperties(
     "Period End": createDateProperty(invoiceItem.period?.end),
     "Proration": createCheckboxProperty(invoiceItem.proration),
     "Quantity": createNumberProperty(invoiceItem.quantity),
-    "Subscription": createRichTextProperty(""),
-    "Subscription Item": createRichTextProperty(""),
     "Test Clock": createRichTextProperty(stringFromObject(invoiceItem.test_clock)),
-    "Unit Amount": createNumberProperty(null),
-    "Unit Amount Decimal": createRichTextProperty(""),
     "Live Mode": createCheckboxProperty(invoiceItem.livemode),
     "Created Date": createDateProperty(invoiceItem.date),
     "Metadata": createRichTextProperty(JSON.stringify(invoiceItem.metadata || {})),
@@ -50,24 +49,51 @@ export function stripeInvoiceItemToNotionProperties(
     properties["Price"] = createRelationProperty(priceNotionPageId);
   }
 
-  // Handle tax rates
-  if (invoiceItem.tax_rates && invoiceItem.tax_rates.length > 0) {
-    properties["Tax Rates Count"] = createNumberProperty(invoiceItem.tax_rates.length);
+  // Handle pricing details
+  if (invoiceItem.pricing?.unit_amount_decimal) {
+    properties["Unit Amount Decimal"] = createRichTextProperty(invoiceItem.pricing.unit_amount_decimal);
+  }
+  
+  // Handle product ID from pricing details
+  if (invoiceItem.pricing?.price_details?.product) {
+    properties["Product"] = createRichTextProperty(invoiceItem.pricing.price_details.product);
+  }
 
+  // Handle parent information
+  if (invoiceItem.parent?.type) {
+    properties["Parent Type"] = createSelectProperty(invoiceItem.parent.type);
+    
+    if (invoiceItem.parent.type === "subscription_details" && invoiceItem.parent.subscription_details) {
+      if (subscriptionNotionPageId) {
+        properties["Subscription"] = createRelationProperty(subscriptionNotionPageId);
+      }
+      if (subscriptionItemNotionPageId) {
+        properties["Subscription Item"] = createRelationProperty(subscriptionItemNotionPageId);
+      }
+    }
+  }
+
+  // Handle tax rates
+  const taxRatesCount = invoiceItem.tax_rates?.length || 0;
+  properties["Tax Rates Count"] = createNumberProperty(taxRatesCount);
+  
+  if (invoiceItem.tax_rates && invoiceItem.tax_rates.length > 0) {
     const taxRatesText = invoiceItem.tax_rates
       .map(rate => {
-        const rateInfo = typeof rate === "string" ? rate : rate.id;
-        if (typeof rate === "object" && rate.display_name) {
-          return `${rate.display_name} (${rateInfo})`;
+        if (typeof rate === "string") {
+          return rate;
         }
-        return rateInfo;
+        const parts = [`ID: ${rate.id}`];
+        if (rate.display_name) parts.push(`Name: ${rate.display_name}`);
+        if (rate.percentage !== undefined) parts.push(`Rate: ${rate.percentage}%`);
+        if (rate.jurisdiction) parts.push(`Jurisdiction: ${rate.jurisdiction}`);
+        if (rate.tax_type) parts.push(`Type: ${rate.tax_type}`);
+        return parts.join(', ');
       })
-      .join(", ");
+      .join(' | ');
 
     properties["Tax Rates"] = createRichTextProperty(taxRatesText);
   } else {
-    properties["Tax Rates Count"] = createNumberProperty(0);
-
     properties["Tax Rates"] = createRichTextProperty("");
   }
 

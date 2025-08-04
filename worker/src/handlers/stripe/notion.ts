@@ -1,5 +1,8 @@
 import type { AppContext } from "@/types";
-import type { AccountDurableObject, AccountStatus } from "@/durable-objects/account-do";
+import type {
+  AccountDurableObject,
+  AccountStatus,
+} from "@/durable-objects/account-do";
 import { getNotionToken, deleteNotionToken } from "@/utils/stripe";
 import {
   searchNotion,
@@ -41,7 +44,7 @@ const resetNotionConnection = async (
 ) => {
   await accountDo.clearNotionPages();
 
-  const coordinator = getCoordinator({env: c.env}, stripeAccountId)
+  const coordinator = getCoordinator({ env: c.env }, stripeAccountId);
   await coordinator.clearAllMappings();
 
   try {
@@ -132,7 +135,7 @@ export const clearDatabaseLinks = async (c: AppContext) => {
   );
 
   await accountDo.clearNotionPages();
-  const coordinator = getCoordinator({env: c.env}, stripeAccountId);
+  const coordinator = getCoordinator({ env: c.env }, stripeAccountId);
   await coordinator.clearAllMappings();
 
   const resp: AccountStatus | null = await accountDo.getStatus();
@@ -212,6 +215,7 @@ export const setUpDatabases = async (c: AppContext) => {
     "Charges",
     getChargeSchema(customersDb.id, paymentIntentDb.id)
   );
+
   const invoicesDb = await createDatabase(
     notionToken,
     parentPageId,
@@ -270,7 +274,13 @@ export const setUpDatabases = async (c: AppContext) => {
     notionToken,
     parentPageId,
     "Invoice Items",
-    getInvoiceItemSchema(customersDb.id, invoicesDb.id, priceDb.id)
+    getInvoiceItemSchema(
+      customersDb.id,
+      invoicesDb.id,
+      priceDb.id,
+      subscriptionDb.id,
+      subscriptionItemDb.id
+    )
   );
 
   const invoiceLineItemDb = await createDatabase(

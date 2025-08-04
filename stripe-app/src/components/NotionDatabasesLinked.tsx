@@ -97,7 +97,7 @@ export const NotionDatabasesLinked: React.FC = () => {
                   onPress={resetDatabases}
                   css={{ width: "1/2" }}
                 >
-                  I'm sure. Reset Databases.
+                  I&apos;m sure. Reset Databases.
                 </Button>
               </Box>
             </Box>
@@ -141,6 +141,7 @@ export const NotionDatabasesLinked: React.FC = () => {
               <Link
                 key={kind}
                 target="_blank"
+                external={true}
                 href={makeNotionLink(databases[kind].pageId)}
               >
                 {databases[kind].title}

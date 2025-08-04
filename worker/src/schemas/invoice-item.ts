@@ -2,6 +2,7 @@ import type { CreateDatabaseParameters } from "@notionhq/client/build/src/api-en
 import {
   titleProperty,
   relationProperty,
+  selectProperty,
   numberProperty,
   richTextProperty,
   checkboxProperty,
@@ -12,7 +13,9 @@ import {
 export const getInvoiceItemSchema = (
   customerDatabaseId: string,
   invoiceDatabaseId: string,
-  priceDatabaseId: string
+  priceDatabaseId: string,
+  subscriptionDatabaseId: string,
+  subscriptionItemDatabaseId: string
 ): CreateDatabaseParameters["properties"] => {
   const baseProperties: CreateDatabaseParameters["properties"] = {
     "Invoice Item ID": titleProperty(),
@@ -26,18 +29,21 @@ export const getInvoiceItemSchema = (
     "Period End": dateProperty(),
     "Proration": checkboxProperty(),
     "Quantity": numberProperty(),
-    "Subscription": richTextProperty(),
-    "Subscription Item": richTextProperty(),
     "Test Clock": richTextProperty(),
-    "Unit Amount": numberProperty(),
-    "Unit Amount Decimal": richTextProperty(),
     "Live Mode": checkboxProperty(),
     "Created Date": dateProperty(),
+    "Price": relationProperty(priceDatabaseId),
+    "Product": richTextProperty(),
+    "Unit Amount Decimal": richTextProperty(),
+    "Parent Type": selectProperty([
+      {name: "subscription_details", color: "blue" as const}
+    ]),
+    "Subscription": relationProperty(subscriptionDatabaseId),
+    "Subscription Item": relationProperty(subscriptionItemDatabaseId),
     "Tax Rates Count": numberProperty(),
     "Tax Rates": richTextProperty(),
     "Discounts Count": numberProperty(),
     "Discounts": richTextProperty(),
-    "Price": relationProperty(priceDatabaseId),
     ...createMetadataFields()
   };
 

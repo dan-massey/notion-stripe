@@ -1,0 +1,169 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Sync to DB: A Notion Integration</title>
+    <!-- Tailwind CSS for styling -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Google Fonts: Inter -->
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap"
+      rel="stylesheet"
+    />
+    <style>
+      /* Use Inter as the default font */
+      body {
+        font-family: "Inter", sans-serif;
+      }
+    </style>
+  </head>
+  <body class="bg-gray-50 text-gray-800">
+    <!-- Main Container -->
+    <div class="min-h-screen flex flex-col items-center justify-center p-4">
+      <div
+        class="w-full max-w-md mx-auto bg-white rounded-xl shadow-lg p-8 md:p-12 text-center"
+      >
+        <!-- Logo Placeholder -->
+        <div class="mb-8">
+          <img
+            src="./icon-db-300.png"
+            alt="Sync to DB Logo"
+            class="w-40 h-40 mx-auto rounded-full object-cover"
+          />
+        </div>
+
+        <!-- Headline -->
+        <h1 class="text-3xl md:text-4xl font-bold text-gray-900 mb-6">
+          Sync to DB
+        </h1>
+
+        <!-- Feature Bullet Points -->
+        <ul class="text-left space-y-4 mb-10 inline-block">
+          <li class="flex items-start">
+            <svg
+              class="w-6 h-6 text-blue-500 mr-3 flex-shrink-0 mt-1"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+              xmlns="http://www.w3.org/2000/svg"
+            >
+              <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
+              ></path>
+            </svg>
+            <span
+              ><strong>Real-time sync:</strong> Keep your Notion workspace up to
+              date with live Stripe data.</span
+            >
+          </li>
+          <li class="flex items-start">
+            <svg
+              class="w-6 h-6 text-blue-500 mr-3 flex-shrink-0 mt-1"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+              xmlns="http://www.w3.org/2000/svg"
+            >
+              <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
+              ></path>
+            </svg>
+            <span
+              ><strong>Sync historical data:</strong> Backfill your Notion
+              workspace with past data from Stripe.</span
+            >
+          </li>
+          <li class="flex items-start">
+            <svg
+              class="w-6 h-6 text-blue-500 mr-3 flex-shrink-0 mt-1"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+              xmlns="http://www.w3.org/2000/svg"
+            >
+              <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
+              ></path>
+            </svg>
+            <span
+              ><strong>Relational databases:</strong> Automatically link related
+              records—like connecting Customers to their Subscriptions or
+              Invoices.</span
+            >
+          </li>
+
+                    <li class="flex items-start">
+            <svg
+              class="w-6 h-6 text-blue-500 mr-3 flex-shrink-0 mt-1"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+              xmlns="http://www.w3.org/2000/svg"
+            >
+              <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
+              ></path>
+            </svg>
+            <span
+              ><strong>Free in test and sandbox:</strong> Pay with a test card (4242) and your test subscription will be free forever.</span
+            >
+          </li>
+        </ul>
+
+        <div class="mb-4">
+          14 day free trial followed by $30/month subscription. Cancel anytime.
+        </div>
+
+        <div>
+          <!-- Call to Action (CTA) Button -->
+          <a
+            id="subscribe-cta"
+            href="#"
+            class="block w-full bg-blue-600 text-white font-bold py-3 px-6 rounded-lg text-lg hover:bg-blue-700 focus:outline-none focus:ring-4 focus:ring-blue-300 transition-all duration-300 ease-in-out transform hover:-translate-y-1"
+          >
+            Subscribe Now
+          </a>
+        </div>
+      </div>
+    </div>
+
+    <script>
+      /**
+       * This script sets the href attribute of the "Subscribe Now" button
+       * by retrieving a URL from the 'subscribeURL' query parameter.
+       */
+      document.addEventListener("DOMContentLoaded", () => {
+        // 1. Get the button element
+        const ctaButton = document.getElementById("subscribe-cta");
+
+        // 2. Get the current URL's query parameters
+        const urlParams = new URLSearchParams(window.location.search);
+
+        // 3. Look for the 'subscribeURL' parameter
+        const subscribeLink = urlParams.get("subscribeURL");
+
+        // 4. If the parameter exists and the button is found, update the href
+        if (ctaButton && subscribeLink) {
+          // We use decodeURIComponent to handle special characters in the URL
+          ctaButton.href = decodeURIComponent(subscribeLink);
+        }
+        // If the parameter is not found, the link will default to "#"
+      });
+    </script>
+  </body>
+</html>

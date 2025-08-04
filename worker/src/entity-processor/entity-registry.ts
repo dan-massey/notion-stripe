@@ -296,6 +296,12 @@ export const ENTITY_REGISTRY: EntityConfigRegistry = {
         },
         required: false,
       },
+      {
+        entityType: "subscription",
+        databaseIdParam: "subscriptionDatabaseId",
+        extractStripeId: (expandedEntity) => extractId(expandedEntity.subscription),
+        required: false,
+      },
     ],
     titleProperty: "Invoice ID",
     retrieveFromStripe: (context, stripeId) => {
@@ -550,6 +556,30 @@ export const ENTITY_REGISTRY: EntityConfigRegistry = {
         extractStripeId: (expandedEntity) => extractId(expandedEntity.price),
         required: false,
       },
+      {
+        entityType: "subscription",
+        databaseIdParam: "subscriptionDatabaseId",
+        extractStripeId: (expandedEntity) => {
+          // Extract subscription from parent details or direct reference
+          if (expandedEntity.parent?.type === "subscription_details") {
+            return extractId(expandedEntity.parent.subscription_details?.subscription);
+          }
+          return extractId(expandedEntity.subscription);
+        },
+        required: false,
+      },
+      {
+        entityType: "subscription_item",
+        databaseIdParam: "subscriptionItemDatabaseId",
+        extractStripeId: (expandedEntity) => {
+          // Extract subscription item from parent details
+          if (expandedEntity.parent?.type === "subscription_details") {
+            return extractId(expandedEntity.parent.subscription_details?.subscription_item);
+          }
+          return null;
+        },
+        required: false,
+      },
     ],
     titleProperty: "Invoice Item ID",
     retrieveFromStripe: (context, stripeId) => {
@@ -567,7 +597,9 @@ export const ENTITY_REGISTRY: EntityConfigRegistry = {
         expandedEntity,
         dependencyPageIds.customer,
         dependencyPageIds.invoice,
-        dependencyPageIds.price
+        dependencyPageIds.price,
+        dependencyPageIds.subscription,
+        dependencyPageIds.subscription_item
       );
     },
   },

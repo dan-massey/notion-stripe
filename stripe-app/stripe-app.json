@@ -1,8 +1,8 @@
 {
   "id": "com.massey-consulting.notion-sync",
-  "version": "0.0.37",
+  "version": "0.0.38",
   "name": "Sync to DB - A Notion integration",
-  "icon": "",
+  "icon": "./icon-db-300.png",
   "permissions": [
     {
       "permission": "event_read",

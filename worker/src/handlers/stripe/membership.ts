@@ -25,8 +25,9 @@ export const getMembership = async (c: AppContext) => {
     throw new Error("Account Data object not ensured!");
   }
 
+  const buyLink = encodeURI(`${checkoutLinks[mode]}?client_reference_id=${stripeAccountId}`);
   let resp: AccountResponse = {
-    checkoutUrl: `${checkoutLinks[mode]}?client_reference_id=${stripeAccountId}`,
+    checkoutUrl: `https://notion.sync-to-db.com/subscribe?subscribeURL=${buyLink}`,
     account: accountData
   };
   if (!accountData || !accountData.subscription?.stripeCustomerId) {

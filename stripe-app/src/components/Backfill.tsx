@@ -1,13 +1,10 @@
-import { useNotionSignIn } from "@/services/notionSignInProvider";
 import { Button, Box, Icon, Spinner } from "@stripe/ui-extension-sdk/ui";
 import { useAccount } from "@/services/accountProvider";
 import { useApi } from "@/services/apiProvider";
 import { useEffect, useState } from "react";
 
 export const Backfill = () => {
-  const { isLoading, isSignedIn, signInUrl, signOut, checkAuthStatus } =
-    useNotionSignIn();
-  const { account, loading, error, refetch } = useAccount();
+  const { loading } = useAccount();
   const { postTyped, getTyped } = useApi();
   type StatusResp = Awaited<
     ReturnType<typeof getTyped<"/stripe/backfill/status">>
