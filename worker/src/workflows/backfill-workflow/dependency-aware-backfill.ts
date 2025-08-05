@@ -195,6 +195,7 @@ export class DependencyAwareBackfillWorkflow extends WorkflowEntrypoint<
 
       const newWorkflowInvocation = await this.env.BACKFILL_WORKFLOW.create({
         params: newParams,
+        id: `${event.payload.stripeMode}-${event.payload.stripeAccountId}-${event.payload.entitiesProcessed ?? 0}-${crypto.randomUUID()}`
       });
 
       return {

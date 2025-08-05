@@ -52,6 +52,7 @@ export const startBackfill = async (c: AppContext) => {
 
   await c.env.BACKFILL_WORKFLOW.create({
     params: params,
+    id: `${stripeMode}-${stripeAccountId}-${0}-${crypto.randomUUID()}`
   });
   const status = {
     recordsProcessed: 0,
