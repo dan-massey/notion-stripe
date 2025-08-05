@@ -59,10 +59,10 @@ export class WebhookEventWorkflow extends WorkflowEntrypoint<
     });
 
     if (
+      !subscription?.stripeSubscriptionId || (
       subscription?.stripeSubscriptionId &&
       !["active", "trialing", "past_due"].includes(
-        subscription?.stripeSubscriptionStatus ?? ""
-      )
+        subscription?.stripeSubscriptionStatus ?? ""))
     ) {
       step.do(
         `[Webhook Workflow] No active subscription ${event.payload.stripeMode}: ${event.payload.stripeAccountId} - not syncing event to Notion.`,
