@@ -15,7 +15,7 @@ import { getNextEntityFromStripe } from "./steps/process-entity-with-dependencie
 
 // Import entity processing logic
 import { EntityProcessor } from "@/entity-processor/entity-processor-refactored";
-import { getAccountStub } from "@/workflows/utils/get-account-stub";
+import { getAccountStubFromBindings } from "@/durable-objects/utils";
 import { getStripe } from "@/workflows/utils/get-stripe";
 
 export class DependencyAwareBackfillWorkflow extends WorkflowEntrypoint<
@@ -100,6 +100,7 @@ export class DependencyAwareBackfillWorkflow extends WorkflowEntrypoint<
     const databaseIds = await step.do("Get database IDs", async () => {
       return getDatabaseIds(
         this.env.ACCOUNT_DURABLE_OBJECT,
+        event.payload.stripeMode,
         event.payload.stripeAccountId
       );
     });
@@ -115,14 +116,16 @@ export class DependencyAwareBackfillWorkflow extends WorkflowEntrypoint<
         const mainEntityData = stripeListResults.data[0];
         const stripe = getStripe(this.env, event.payload.stripeMode);
 
-        const accountStub = getAccountStub(
+        const accountStub = getAccountStubFromBindings(
           this.env,
+          event.payload.stripeMode,
           event.payload.stripeAccountId
         );
 
         // Create EntityProcessor with step wrapper
         const entityProcessor = EntityProcessor.fromWorkflow({
           stripeAccountId: event.payload.stripeAccountId,
+          stripeMode: event.payload.stripeMode,
           notionToken,
           coordinatorNamespace: this.env.STRIPE_ENTITY_COORDINATOR,
           stripe,

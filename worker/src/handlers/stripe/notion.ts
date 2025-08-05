@@ -1,4 +1,4 @@
-import type { AppContext } from "@/types";
+import type { AppContext, StripeMode } from "@/types";
 import type {
   AccountDurableObject,
   AccountStatus,
@@ -40,11 +40,12 @@ export const getNotionLink = async (c: AppContext) => {
 const resetNotionConnection = async (
   c: AppContext,
   stripeAccountId: string,
+  stripeMode: StripeMode,
   accountDo: DurableObjectStub<AccountDurableObject>
 ) => {
   await accountDo.clearNotionPages();
 
-  const coordinator = getCoordinator({ env: c.env }, stripeAccountId);
+  const coordinator = getCoordinator({ env: c.env }, stripeMode, stripeAccountId);
   await coordinator.clearAllMappings();
 
   try {
@@ -69,9 +70,9 @@ export const deleteNotionAuth = async (c: AppContext) => {
   const accountDo = await ensureAccountDo(
     c,
     stripeAccountId,
-    c.get("stripeMode")
+    c.get("stripeMode") || "test"
   );
-  resetNotionConnection(c, stripeAccountId, accountDo);
+  resetNotionConnection(c, stripeAccountId, c.get("stripeMode") || "test", accountDo);
   let resp: AccountStatus | null = await accountDo.getStatus();
 
   if (!resp) {
@@ -116,9 +117,9 @@ export const validateAuth = async (c: AppContext) => {
     const accountDo = await ensureAccountDo(
       c,
       stripeAccountId,
-      c.get("stripeMode")
+      c.get("stripeMode") || "test"
     );
-    await resetNotionConnection(c, stripeAccountId, accountDo);
+    await resetNotionConnection(c, stripeAccountId, c.get("stripeMode") || "test", accountDo);
   }
   return c.json({ authed: isAuthed });
 };
@@ -131,11 +132,11 @@ export const clearDatabaseLinks = async (c: AppContext) => {
   const accountDo = await ensureAccountDo(
     c,
     stripeAccountId,
-    c.get("stripeMode")
+    c.get("stripeMode") || "test"
   );
 
   await accountDo.clearNotionPages();
-  const coordinator = getCoordinator({ env: c.env }, stripeAccountId);
+  const coordinator = getCoordinator({ env: c.env }, c.get("stripeMode") || "test", stripeAccountId);
   await coordinator.clearAllMappings();
 
   const resp: AccountStatus | null = await accountDo.getStatus();
@@ -327,7 +328,7 @@ export const setUpDatabases = async (c: AppContext) => {
   const accountDo = await ensureAccountDo(
     c,
     stripeAccountId,
-    c.get("stripeMode")
+    c.get("stripeMode") || "test"
   );
 
   await accountDo.setNotionPages({

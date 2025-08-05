@@ -1,11 +1,13 @@
 import { AccountDurableObject, type Databases } from "@/durable-objects/account-do";
+import { StripeMode } from "@/types";
+import { getStubFromNamespace } from "@/durable-objects/utils";
 
 export async function getDatabaseIds(
-  accountDurableObject: DurableObjectNamespace<AccountDurableObject>,
+  durableObjectNamespace: DurableObjectNamespace<AccountDurableObject>,
+  stripeMode: StripeMode,
   stripeAccountId: string
 ): Promise<Databases | null> {
-  const id = accountDurableObject.idFromName(stripeAccountId);
-  const membershipDo = accountDurableObject.get(id);
+  const membershipDo = getStubFromNamespace(durableObjectNamespace, stripeMode, stripeAccountId);
   const info = await membershipDo.getStatus();
 
   return info?.notionConnection?.databases ?? null;

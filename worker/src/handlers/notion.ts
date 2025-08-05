@@ -33,7 +33,7 @@ export const notionAuthCallback = async (c: AppContext) => {
   const state = c.req.query("state");
 
   if (!code || !state) {
-    return c.text("Missing code or state parameter", 400);
+    return c.text("Sign in cancelled. Close window to return to Stripe.", 400);
   }
 
   // Verify state matches what you stored

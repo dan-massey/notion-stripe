@@ -46,7 +46,7 @@ export const stripeWebhookHandler = async (c: AppContext) => {
         accountStatus.subscription?.stripeSubscriptionId
       );
     }
-    const coordinator = getCoordinator({ env: c.env }, stripeAccountId);
+    const coordinator = getCoordinator({ env: c.env }, modeFromUrl, stripeAccountId);
     await coordinator.clearAllMappings();
     await account.deleteSubscription();
     await account.clearNotionPages();

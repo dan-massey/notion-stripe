@@ -1,11 +1,12 @@
 import type { Stripe } from "stripe";
 import type { AccountDurableObject } from "@/durable-objects/account-do";
 import { StripeMode } from "@/types";
+import { getStubFromNamespace } from "@/durable-objects/utils";
 
 export const handleCheckoutComplete = async (
   stripe: Stripe,
   mode: StripeMode,
-  accountDoStub: DurableObjectNamespace<AccountDurableObject>,
+  accountDoNamespace: DurableObjectNamespace<AccountDurableObject>,
   event: Stripe.Event
 ) => {
   const session = event.data.object as Stripe.Checkout.Session;
@@ -49,8 +50,7 @@ export const handleCheckoutComplete = async (
   if (!stripeAccountId) {
     throw new Error("Stripe account ID not found.");
   }
-  const id = accountDoStub.idFromName(stripeAccountId);
-  const acountDo = await accountDoStub.get(id);
+  const accountDo = getStubFromNamespace(accountDoNamespace, mode, stripeAccountId);
 
   await stripe.subscriptions.update(subscriptionId, {
     metadata: {
@@ -58,7 +58,7 @@ export const handleCheckoutComplete = async (
     },
   });
 
-  await acountDo.setSubscriptionStatus({
+  await accountDo.setSubscriptionStatus({
     stripeAccountId: stripeAccountId,
     stripeCustomerId: customerId,
     stripeSubscriptionId: subscriptionId,

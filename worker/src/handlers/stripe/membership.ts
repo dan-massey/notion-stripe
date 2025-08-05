@@ -58,7 +58,7 @@ export const getMembership = async (c: AppContext) => {
 
 export const getMembershipStatus = async (c: AppContext) => {
   const stripeAccountId = c.get("stripeAccountId");
-  const mode = c.get("stripeMode");
+  const mode = c.get("stripeMode") || "test";
   if (!stripeAccountId) {
     return c.json({ message: "Stripe account ID not found" }, 400);
   }

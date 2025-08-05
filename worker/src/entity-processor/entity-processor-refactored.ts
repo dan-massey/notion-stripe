@@ -1,4 +1,4 @@
-import type { DatabaseEntity } from "@/types";
+import type { DatabaseEntity, StripeMode } from "@/types";
 import type { HandlerContext } from "@/handlers/stripe/webhook/shared/types";
 import type { StripeEntityCoordinator } from "@/durable-objects/stripe-entity-coordinator-do";
 import type {
@@ -21,6 +21,7 @@ import { defaultStepWrapper } from "@/workflows/utils/default-step-wrapper";
 
 interface ProcessingContext {
   stripeAccountId: string;
+  stripeMode: StripeMode;
   notionToken: string;
   coordinatorNamespace: DurableObjectNamespace<StripeEntityCoordinator>;
   stripe: Stripe;
@@ -41,6 +42,7 @@ interface ProcessingOptions {
 
 interface WorkflowProcessingParams {
   stripeAccountId: string;
+  stripeMode: StripeMode;
   notionToken: string;
   coordinatorNamespace: DurableObjectNamespace<StripeEntityCoordinator>;
   stripe: Stripe;
@@ -97,6 +99,7 @@ export class EntityProcessor implements EntityDependencyProcessor {
       const handlerContext = this.createHandlerContext();
       const coordinator = getCoordinator(
         handlerContext,
+        handlerContext.stripeMode,
         handlerContext.stripeAccountId
       );
 
@@ -146,7 +149,34 @@ export class EntityProcessor implements EntityDependencyProcessor {
 
     const mainEntityPageId = syncResult.notionPageId;
 
-    if (isForDependencyResolution || !mainEntityPageId) {
+    // If we don't have a main entity record ID but the entity was processed, 
+    // try to get the existing record ID so we can still process discounts/sub-entities
+    let effectivePageId = mainEntityPageId;
+    if (!mainEntityPageId) {
+      console.log(`⚠️ No main entity page ID returned from sync for ${entityType} ${entityId}, attempting to get existing record ID...`);
+      try {
+        const handlerContext = this.createHandlerContext();
+        const coordinator = getCoordinator(handlerContext, handlerContext.stripeMode, handlerContext.stripeAccountId);
+        const mapping = await coordinator.getEntityMapping(entityType, entityId);
+        effectivePageId = mapping?.notionPageId;
+        if (effectivePageId) {
+          console.log(`✅ Found existing page ID for ${entityType} ${entityId}: ${effectivePageId}, will process discounts/sub-entities`);
+        }
+      } catch (error) {
+        console.warn(`Failed to get existing mapping for ${entityType} ${entityId}:`, error);
+      }
+    }
+    
+    if (!effectivePageId) {
+      console.log(`⚠️ No record ID available for ${entityType} ${entityId}, skipping sub-entity and discount processing`);
+      return { pageId: mainEntityPageId, expandedEntity };
+    }
+
+    
+    // If we don't have a main entity record ID but the entity was processed, 
+    // we might still want to process discounts/sub-entities
+    if (!mainEntityPageId) {
+      console.log(`⚠️ No main entity record ID for ${entityType} ${entityId}, skipping sub-entity and discount processing`);
       return { pageId: mainEntityPageId, expandedEntity };
     }
 
@@ -159,7 +189,7 @@ export class EntityProcessor implements EntityDependencyProcessor {
         await subEntityProcessor.processSubEntities(
           expandedEntity,
           databases,
-          mainEntityPageId,
+          effectivePageId,
           stepWrapper
         );
       }
@@ -172,11 +202,12 @@ export class EntityProcessor implements EntityDependencyProcessor {
         entityType === "subscription" ||
         entityType === "invoiceitem")
     ) {
+      console.log(`🎯 DISCOUNT PROCESSING: About to process discounts for ${entityType} ${entityId}, skipDiscounts=${skipDiscounts}, effectiveRecordId=${effectivePageId}`);
       await this.discountProcessor.processEntityDiscount(
         expandedEntity,
         entityType,
         databases,
-        mainEntityPageId,
+        effectivePageId,
         stepWrapper
       );
     }
@@ -238,6 +269,7 @@ export class EntityProcessor implements EntityDependencyProcessor {
 
     return {
       stripeAccountId: this.context.stripeAccountId,
+      stripeMode: this.context.stripeMode,
       notionToken: this.context.notionToken,
       stripe: this.context.stripe,
       account: this.context.account,
@@ -253,6 +285,7 @@ export class EntityProcessor implements EntityDependencyProcessor {
   static fromWebhook(handlerContext: HandlerContext): EntityProcessor {
     const context: ProcessingContext = {
       stripeAccountId: handlerContext.stripeAccountId,
+      stripeMode: handlerContext.stripeMode,
       notionToken: handlerContext.notionToken,
       coordinatorNamespace: handlerContext.env.STRIPE_ENTITY_COORDINATOR,
       stripe: handlerContext.stripe,
@@ -285,6 +318,7 @@ export class EntityProcessor implements EntityDependencyProcessor {
   static fromWorkflow(params: WorkflowProcessingParams): EntityProcessor {
     const context: ProcessingContext = {
       stripeAccountId: params.stripeAccountId,
+      stripeMode: params.stripeMode,
       notionToken: params.notionToken,
       coordinatorNamespace: params.coordinatorNamespace,
       stripe: params.stripe,
@@ -293,6 +327,7 @@ export class EntityProcessor implements EntityDependencyProcessor {
 
     const handlerContext = {
       stripeAccountId: params.stripeAccountId,
+      stripeMode: params.stripeMode,
       notionToken: params.notionToken,
       stripe: params.stripe,
       account: params.accountStub,

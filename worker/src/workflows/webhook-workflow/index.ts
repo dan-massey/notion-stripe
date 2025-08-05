@@ -13,7 +13,7 @@ import type {
 import { Stripe } from "stripe";
 import { EntityProcessor } from "@/entity-processor/entity-processor-refactored";
 import { getNotionToken } from "@/workflows/utils/get-notion-token";
-import { getAccountStub } from "@/workflows/utils/get-account-stub";
+import { getAccountStubFromBindings } from "@/durable-objects/utils";
 import { Databases } from "@/durable-objects/account-do";
 import { getStripe } from "@/workflows/utils/get-stripe";
 
@@ -52,7 +52,7 @@ export class WebhookEventWorkflow extends WorkflowEntrypoint<
   WorkflowParams
 > {
   async run(event: WorkflowEvent<WorkflowParams>, step: WorkflowStep) {
-    const accountStub = getAccountStub(this.env, event.payload.stripeAccountId);
+    const accountStub = getAccountStubFromBindings(this.env, event.payload.stripeMode, event.payload.stripeAccountId);
     const subscription = await step.do("Get account subscription", async () => {
       const status = await accountStub.getStatus();
       return status?.subscription;
@@ -140,6 +140,7 @@ export class WebhookEventWorkflow extends WorkflowEntrypoint<
           const stripe = getStripe(this.env, event.payload.stripeMode);
           const entityProcessor = EntityProcessor.fromWorkflow({
             stripeAccountId: event.payload.stripeAccountId,
+            stripeMode: event.payload.stripeMode,
             notionToken,
             coordinatorNamespace: this.env.STRIPE_ENTITY_COORDINATOR,
             stripe,
@@ -169,6 +170,7 @@ export class WebhookEventWorkflow extends WorkflowEntrypoint<
         const stripe = getStripe(this.env, event.payload.stripeMode);
         const entityProcessor = EntityProcessor.fromWorkflow({
           stripeAccountId: event.payload.stripeAccountId,
+          stripeMode: event.payload.stripeMode,
           notionToken,
           coordinatorNamespace: this.env.STRIPE_ENTITY_COORDINATOR,
           stripe,

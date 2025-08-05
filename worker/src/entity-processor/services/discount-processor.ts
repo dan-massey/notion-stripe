@@ -18,16 +18,39 @@ export class DiscountProcessor {
   ) {}
 
   /**
-   * Extract discount object from entities that may have discounts
+   * Extract discount objects from entities that may have discounts
    */
-  extractDiscountFromEntity(
+  extractDiscountsFromEntity(
     entity: StripeTypeMap[DatabaseEntity],
     entityType: "customer" | "invoice" | "subscription" | "invoiceitem"
-  ): StripeTypeMap["discount"] | null {
-    if (!("discount" in entity) || !entity.discount) {
-      return null;
+  ): StripeTypeMap["discount"][] {
+    const discounts: StripeTypeMap["discount"][] = [];
+    
+    // Handle different discount structures based on entity type
+    if (entityType === "invoice" || entityType === "subscription" || entityType === "invoiceitem") {
+      // These entities have 'discounts' array
+      if ("discounts" in entity && Array.isArray(entity.discounts)) {
+        for (const discount of entity.discounts) {
+          // Only process expanded discount objects (not string IDs or deleted discounts)
+          if (discount && 
+              typeof discount === 'object' && 
+              typeof discount !== 'string' &&
+              'id' in discount &&
+              !('deleted' in discount)) {
+            discounts.push(discount as StripeTypeMap["discount"]);
+          }
+        }
+      }
+    } else if (entityType === "customer") {
+      // Customer has single 'discount' property
+      if ("discount" in entity && entity.discount && 
+          typeof entity.discount === 'object' &&
+          'id' in entity.discount) {
+        discounts.push(entity.discount);
+      }
     }
-    return entity.discount;
+    
+    return discounts;
   }
 
   /**
@@ -63,11 +86,15 @@ export class DiscountProcessor {
           }
         );
 
+        // Merge relation page IDs with dependency page IDs
+        // relationPageIds takes precedence for any matching keys
+        const mergedPageIds = { ...dependencyPageIds, ...relationPageIds };
+
         // Convert to Notion properties
         const config = ENTITY_REGISTRY.discount;
         const notionProperties = config.convertToNotionProperties(
           discountObject,
-          dependencyPageIds
+          mergedPageIds
         );
 
         // Upsert the discount
@@ -109,7 +136,7 @@ export class DiscountProcessor {
   }
 
   /**
-   * Process discount when an entity with discount occurs
+   * Process discounts when an entity with discount occurs
    */
   async processEntityDiscount(
     entity: StripeTypeMap[DatabaseEntity],
@@ -118,26 +145,28 @@ export class DiscountProcessor {
     entityNotionPageId: string,
     stepWrapper: StepWrapper = defaultStepWrapper
   ): Promise<void> {
-    // Extract discount from the entity
-    const discountObject = this.extractDiscountFromEntity(entity, entityType);
+    // Extract discounts from the entity
+    const discountObjects = this.extractDiscountsFromEntity(entity, entityType);
 
-    if (!discountObject) {
-      console.log(`No discount found for ${entityType} ${entity.id}`);
+    if (discountObjects.length === 0) {
+      console.log(`No discounts found for ${entityType} ${entity.id}`);
       return;
     }
 
-    console.log(`💰 Processing discount for ${entityType} ${entity.id}`);
+    console.log(`💰 Processing ${discountObjects.length} discount(s) for ${entityType} ${entity.id}`);
 
     // Use the parent entity page ID for the appropriate relation
     const relationPageIds: Record<string, string> = {};
     relationPageIds[entityType] = entityNotionPageId;
 
-    // Process the discount using the processDiscount method
-    await this.processDiscount(
-      discountObject,
-      databases,
-      relationPageIds,
-      stepWrapper
-    );
+    // Process each discount
+    for (const discountObject of discountObjects) {
+      await this.processDiscount(
+        discountObject,
+        databases,
+        relationPageIds,
+        stepWrapper
+      );
+    }
   }
 }

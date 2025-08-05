@@ -36,7 +36,7 @@ export async function coordinatedUpsert<K extends DatabaseEntity>(
     throw error;
   }
 
-  const coordinator = getCoordinator(context, context.stripeAccountId);
+  const coordinator = getCoordinator(context, context.stripeMode, context.stripeAccountId);
 
   const propertyHash = await hashObject(notionProperties);
 
