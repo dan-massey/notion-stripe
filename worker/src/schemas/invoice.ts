@@ -26,6 +26,7 @@ export const getInvoiceSchema = (
 ): CreateDatabaseParameters["properties"] => {
   const properties: CreateDatabaseParameters["properties"] = {
   "Invoice ID": titleProperty(),
+  "Link": urlProperty(),
   "Customer": relationProperty(customerDatabaseId),
   "Invoice Number": richTextProperty(),
   "Status": selectProperty(statusOptions.invoice),

@@ -21,6 +21,7 @@ import {
 
 export const getChargeSchema = (customerDatabaseId: string, paymentIntentDatabaseId: string): CreateDatabaseParameters["properties"] => ({
   "Charge ID": titleProperty(),
+  "Link": urlProperty(),
   "Customer": relationProperty(customerDatabaseId),
   "Amount": numberProperty(),
   "Amount Captured": numberProperty(),

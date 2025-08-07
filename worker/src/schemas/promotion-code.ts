@@ -8,6 +8,7 @@ import {
   dateProperty,
   selectProperty,
   createMetadataFields,
+  urlProperty,
 } from "./utils";
 
 export const getPromotionCodeSchema = (
@@ -16,6 +17,7 @@ export const getPromotionCodeSchema = (
 ): CreateDatabaseParameters["properties"] => {
   const baseProperties: CreateDatabaseParameters["properties"] = {
     "Promotion Code ID": titleProperty(),
+    "Link": urlProperty(),
     Customer: relationProperty(customerDatabaseId),
     Code: richTextProperty(),
     Active: checkboxProperty(),

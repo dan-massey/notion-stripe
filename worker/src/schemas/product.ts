@@ -13,6 +13,7 @@ import {
 
 export const productSchema: CreateDatabaseParameters["properties"] = {
   "Product ID": titleProperty(),
+  "Link": urlProperty(),
   "Name": richTextProperty(),
   "Active": checkboxProperty(),
   "Description": richTextProperty(),

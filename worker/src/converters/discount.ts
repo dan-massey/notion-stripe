@@ -1,15 +1,9 @@
 import type Stripe from "stripe";
 import {
   createTitleProperty,
-  createRichTextProperty,
-  createCheckboxProperty,
-  createNumberProperty,
-  createSelectProperty,
   createDateProperty,
-  createUrlProperty,
   createRelationProperty,
-  stringFromObject,
-} from "@/converters/notion-properties";
+} from "@/converters/utils";
 
 export function stripeDiscountToNotionProperties(
   discount: Stripe.Discount,

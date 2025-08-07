@@ -1,6 +1,7 @@
 import type Stripe from "stripe";
 import {
   createTitleProperty,
+  createSearchLinkProperty,
   createRichTextProperty,
   createCheckboxProperty,
   createEmailProperty,
@@ -9,7 +10,7 @@ import {
   createDateProperty,
   createPhoneProperty,
   stringFromObject,
-} from "@/converters/notion-properties";
+} from "@/converters/utils";
 
 export function stripeCustomerToNotionProperties(customer: Stripe.Customer) {
   if (customer.deleted) {
@@ -19,6 +20,7 @@ export function stripeCustomerToNotionProperties(customer: Stripe.Customer) {
   }
   const properties: Record<string, any> = {
     "Customer ID": createTitleProperty(customer.id),
+    "Link": createSearchLinkProperty(customer.livemode, customer.id),
     "Name": createRichTextProperty(customer.name),
     "Email": createEmailProperty(customer.email),
     "Phone": createPhoneProperty(customer.phone),

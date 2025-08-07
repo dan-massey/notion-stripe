@@ -3,6 +3,7 @@ import type {
 } from "@notionhq/client/build/src/api-endpoints";
 import {
   titleProperty,
+  urlProperty,
   richTextProperty,
   emailProperty,
   phoneProperty,
@@ -16,6 +17,7 @@ import {
 
 export const customerSchema: CreateDatabaseParameters["properties"] = {
   "Customer ID": titleProperty(),
+  "Link": urlProperty(),
   "Name": richTextProperty(),
   "Email": emailProperty(),
   "Phone": phoneProperty(),

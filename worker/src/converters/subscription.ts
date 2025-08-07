@@ -8,7 +8,8 @@ import {
   createDateProperty,
   createRelationProperty,
   stringFromObject,
-} from "@/converters/notion-properties";
+  createSearchLinkProperty,
+} from "@/converters/utils";
 
 export function stripeSubscriptionToNotionProperties(
   subscription: Stripe.Subscription, 
@@ -19,6 +20,7 @@ export function stripeSubscriptionToNotionProperties(
 ) {
   const properties: Record<string, any> = {
     "Subscription ID": createTitleProperty(subscription.id),
+    "Link": createSearchLinkProperty(subscription.livemode, subscription.id),
     "Status": createSelectProperty(subscription.status),
     "Collection Method": createSelectProperty(subscription.collection_method),
     "Currency": createRichTextProperty(subscription.currency?.toUpperCase()),

@@ -15,6 +15,7 @@ import {
 
 export const getCreditNoteSchema = (customerDatabaseId: string, invoiceDatabaseId: string): CreateDatabaseParameters["properties"] => ({
   "Credit Note ID": titleProperty(),
+  "Link": urlProperty(),
   "Customer": relationProperty(customerDatabaseId),
   "Invoice": relationProperty(invoiceDatabaseId),
   "Number": richTextProperty(),

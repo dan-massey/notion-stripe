@@ -10,7 +10,8 @@ import {
   createMetadataFields,
   statusOptions,
   collectionMethodOptions,
-  intervalOptions
+  intervalOptions,
+  urlProperty
 } from "./utils";
 
 export const getSubscriptionSchema = (
@@ -20,6 +21,7 @@ export const getSubscriptionSchema = (
   productDatabaseId: string
 ): CreateDatabaseParameters["properties"] => ({
   "Subscription ID": titleProperty(),
+  "Link": urlProperty(),
   "Customer": relationProperty(customerDatabaseId),
   "Latest Invoice": relationProperty(invoiceDatabaseId),
   "Status": selectProperty(statusOptions.subscription),

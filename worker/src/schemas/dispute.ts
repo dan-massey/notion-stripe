@@ -12,11 +12,13 @@ import {
   checkboxProperty,
   emailProperty,
   createMetadataFields,
-  cardBrandOptions
+  cardBrandOptions,
+  urlProperty
 } from "./utils";
 
 export const getDisputeSchema = (chargeDatabaseId: string, paymentIntentDatabaseId: string): CreateDatabaseParameters["properties"] => ({
   "Dispute ID": titleProperty(),
+  "Link": urlProperty(),
   "Charge": relationProperty(chargeDatabaseId),
   "Amount": numberProperty(),
   "Currency": richTextProperty(),

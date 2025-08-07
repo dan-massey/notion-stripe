@@ -9,7 +9,8 @@ import {
   richTextProperty,
   checkboxProperty,
   dateProperty,
-  createMetadataFields
+  createMetadataFields,
+  urlProperty
 } from "./utils";
 
 export const getInvoiceLineItemSchema = (
@@ -21,6 +22,7 @@ export const getInvoiceLineItemSchema = (
 ): CreateDatabaseParameters["properties"] => {
   return {
     "Line Item ID": titleProperty(),
+    "Link": urlProperty(),
     "Invoice": relationProperty(invoiceDatabaseId),
     "Price": relationProperty(priceDatabaseId),
     "Product": richTextProperty(),

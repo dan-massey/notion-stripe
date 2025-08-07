@@ -8,7 +8,8 @@ import {
   createDateProperty,
   createRelationProperty,
   stringFromObject,
-} from "@/converters/notion-properties";
+  createSearchLinkProperty,
+} from "@/converters/utils";
 
 export function stripeSubscriptionItemToNotionProperties(
   subscriptionItem: Stripe.SubscriptionItem,

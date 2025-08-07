@@ -1,6 +1,7 @@
 import type Stripe from "stripe";
 import {
   createTitleProperty,
+  createSearchLinkProperty,
   createRichTextProperty,
   createCheckboxProperty,
   createEmailProperty,
@@ -11,7 +12,7 @@ import {
   stringFromObject,
   createPhoneProperty,
   createRelationProperty,
-} from "@/converters/notion-properties";
+} from "@/converters/utils";
 
 export function stripeChargeToNotionProperties(
   charge: Stripe.Charge,
@@ -20,6 +21,7 @@ export function stripeChargeToNotionProperties(
 ) {
   const properties: Record<string, any> = {
     "Charge ID": createTitleProperty(charge.id),
+    "Link": createSearchLinkProperty(charge.livemode, charge.id),
     Amount: createNumberProperty(charge.amount),
     "Amount Captured": createNumberProperty(charge.amount_captured),
     "Amount Refunded": createNumberProperty(charge.amount_refunded),

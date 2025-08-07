@@ -7,11 +7,13 @@ import {
   createSelectProperty,
   createDateProperty,
   createRelationProperty,
-} from "@/converters/notion-properties";
+  createSearchLinkProperty,
+} from "@/converters/utils";
 
 export function stripePriceToNotionProperties(price: Stripe.Price, productNotionPageId: string | null) {
   const properties: Record<string, any> = {
     "Price ID": createTitleProperty(price.id),
+    "Link": createSearchLinkProperty(price.livemode, price.id),
     "Active": createCheckboxProperty(price.active),
     "Type": createSelectProperty(price.type),
     "Billing Scheme": createSelectProperty(price.billing_scheme),

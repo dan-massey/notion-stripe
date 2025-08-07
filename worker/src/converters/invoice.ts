@@ -11,7 +11,8 @@ import {
   createPhoneProperty,
   createRelationProperty,
   stringFromObject,
-} from "@/converters/notion-properties";
+  createSearchLinkProperty,
+} from "@/converters/utils";
 
 export function stripeInvoiceToNotionProperties(
   invoice: Stripe.Invoice,
@@ -21,6 +22,7 @@ export function stripeInvoiceToNotionProperties(
 ) {
   const properties: Record<string, any> = {
     "Invoice ID": createTitleProperty(invoice.id || ""),
+    "Link": createSearchLinkProperty(invoice.livemode, invoice.id || ""),
     "Invoice Number": createRichTextProperty(invoice.number),
     Status: createSelectProperty(invoice.status),
     "Collection Method": createSelectProperty(invoice.collection_method),

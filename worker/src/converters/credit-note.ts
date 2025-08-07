@@ -1,6 +1,7 @@
 import type Stripe from "stripe";
 import {
   createTitleProperty,
+  createSearchLinkProperty,
   createRichTextProperty,
   createCheckboxProperty,
   createNumberProperty,
@@ -9,7 +10,7 @@ import {
   createUrlProperty,
   createRelationProperty,
   stringFromObject,
-} from "@/converters/notion-properties";
+} from "@/converters/utils";
 
 export function stripeCreditNoteToNotionProperties(
   creditNote: Stripe.CreditNote, 
@@ -18,6 +19,7 @@ export function stripeCreditNoteToNotionProperties(
 ) {
   const properties: Record<string, any> = {
     "Credit Note ID": createTitleProperty(creditNote.id),
+    "Link": createSearchLinkProperty(creditNote.livemode, creditNote.id),
     "Number": createRichTextProperty(creditNote.number),
     "Status": createSelectProperty(creditNote.status),
     "Amount": createNumberProperty(creditNote.amount || 0),

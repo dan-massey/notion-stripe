@@ -10,11 +10,13 @@ import {
   numberProperty,
   dateProperty,
   createMetadataFields,
-  intervalOptions
+  intervalOptions,
+  urlProperty
 } from "./utils";
 
 export const getPriceSchema = (productDatabaseId: string): CreateDatabaseParameters["properties"] => ({
   "Price ID": titleProperty(),
+  "Link": urlProperty(),
   "Product": relationProperty(productDatabaseId),
   "Active": checkboxProperty(),
   "Type": selectProperty([

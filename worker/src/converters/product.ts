@@ -5,12 +5,14 @@ import {
   createCheckboxProperty,
   createUrlProperty,
   createDateProperty,
-  createNumberProperty
-} from "@/converters/notion-properties";
+  createNumberProperty,
+  createSearchLinkProperty
+} from "@/converters/utils";
 
 export function stripeProductToNotionProperties(product: Stripe.Product) {
   const properties: Record<string, any> = {
     "Product ID": createTitleProperty(product.id),
+    "Link": createSearchLinkProperty(product.livemode, product.id),
     "Name": createRichTextProperty(product.name),
     "Active": createCheckboxProperty(product.active),
     "Description": createRichTextProperty(product.description),

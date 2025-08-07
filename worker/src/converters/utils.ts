@@ -18,6 +18,13 @@ export function createRichTextProperty(
   };
 }
 
+export function createSearchLinkProperty(livemode: boolean, entityId: string) {
+  if (entityId === "") {
+    return "";
+  }
+  return createUrlProperty(`https://dashboard.stripe.com/${livemode ? '': 'test/'}search?query=${entityId}`)
+}
+
 export function createTitleProperty(content: string): any {
   return {
     title: [

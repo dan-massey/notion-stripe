@@ -11,13 +11,15 @@ import {
   emailProperty,
   phoneProperty,
   createAddressFields,
-  createMetadataFields
+  createMetadataFields,
+  urlProperty
 } from "./utils";
 
 export const getPaymentIntentSchema = (
   customerDatabaseId: string
 ): CreateDatabaseParameters["properties"] => ({
   "Payment Intent ID": titleProperty(),
+  "Link": urlProperty(),
   "Customer": relationProperty(customerDatabaseId),
   "Amount": numberProperty(),
   "Amount Capturable": numberProperty(),

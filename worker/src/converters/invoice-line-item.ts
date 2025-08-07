@@ -6,8 +6,9 @@ import {
   createNumberProperty,
   createSelectProperty,
   createDateProperty,
-  createRelationProperty
-} from "@/converters/notion-properties";
+  createRelationProperty,
+  createSearchLinkProperty
+} from "@/converters/utils";
 
 export function stripeInvoiceLineItemToNotionProperties(
   lineItem: Stripe.InvoiceLineItem, 
@@ -19,6 +20,7 @@ export function stripeInvoiceLineItemToNotionProperties(
 ) {
   const properties: Record<string, any> = {
     "Line Item ID": createTitleProperty(lineItem.id),
+    "Link": createSearchLinkProperty(lineItem.livemode, lineItem.id),
     "Amount": createNumberProperty(lineItem.amount || 0),
     "Currency": createRichTextProperty(lineItem.currency?.toUpperCase()),
     "Description": createRichTextProperty(lineItem.description),

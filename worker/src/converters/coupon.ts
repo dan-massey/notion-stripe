@@ -5,7 +5,7 @@ import {
   createRichTextProperty,
   createSelectProperty,
   createTitleProperty,
-} from "@/converters/notion-properties";
+} from "@/converters/utils";
 
 export function stripeCouponToNotionProperties(coupon: Stripe.Coupon) {
   const properties: Record<string, any> = {

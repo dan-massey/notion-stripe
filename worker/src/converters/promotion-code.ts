@@ -7,7 +7,8 @@ import {
   createSelectProperty,
   createDateProperty,
   createRelationProperty,
-} from "@/converters/notion-properties";
+  createSearchLinkProperty,
+} from "@/converters/utils";
 
 export function stripePromotionCodeToNotionProperties(
   promotionCode: Stripe.PromotionCode,
@@ -16,6 +17,7 @@ export function stripePromotionCodeToNotionProperties(
 ) {
   const properties: Record<string, any> = {
     "Promotion Code ID": createTitleProperty(promotionCode.id),
+    "Link": createSearchLinkProperty(promotionCode.livemode, promotionCode.id),
     Code: createRichTextProperty(promotionCode.code),
     Active: createCheckboxProperty(promotionCode.active),
     "Times Redeemed": createNumberProperty(promotionCode.times_redeemed || 0),

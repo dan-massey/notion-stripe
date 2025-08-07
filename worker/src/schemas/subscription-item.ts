@@ -8,7 +8,8 @@ import {
   numberProperty,
   selectProperty,
   createMetadataFields,
-  intervalOptions
+  intervalOptions,
+  urlProperty
 } from "./utils";
 
 export const getSubscriptionItemSchema = (

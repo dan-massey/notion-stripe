@@ -1,6 +1,7 @@
 import type { CreateDatabaseParameters } from "@notionhq/client/build/src/api-endpoints";
 import {
   titleProperty,
+  urlProperty,
   relationProperty,
   selectProperty,
   numberProperty,
@@ -19,6 +20,7 @@ export const getInvoiceItemSchema = (
 ): CreateDatabaseParameters["properties"] => {
   const baseProperties: CreateDatabaseParameters["properties"] = {
     "Invoice Item ID": titleProperty(),
+    "Link": urlProperty(),
     "Customer": relationProperty(customerDatabaseId),
     "Invoice": relationProperty(invoiceDatabaseId),
     "Amount": numberProperty(),

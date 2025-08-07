@@ -9,7 +9,8 @@ import {
   createDateProperty,
   createRelationProperty,
   stringFromObject,
-} from "@/converters/notion-properties";
+  createSearchLinkProperty,
+} from "@/converters/utils";
 
 export function stripePaymentIntentToNotionProperties(
   paymentIntent: Stripe.PaymentIntent,
@@ -17,6 +18,7 @@ export function stripePaymentIntentToNotionProperties(
 ) {
   const properties: Record<string, any> = {
     "Payment Intent ID": createTitleProperty(paymentIntent.id),
+    "Link": createSearchLinkProperty(paymentIntent.livemode, paymentIntent.id),
     Amount: createNumberProperty(paymentIntent.amount || 0),
     "Amount Capturable": createNumberProperty(paymentIntent.amount_capturable || 0),
     "Amount Received": createNumberProperty(paymentIntent.amount_received || 0),

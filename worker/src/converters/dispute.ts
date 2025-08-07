@@ -1,6 +1,7 @@
 import type Stripe from "stripe";
 import {
   createTitleProperty,
+  createSearchLinkProperty,
   createRichTextProperty,
   createCheckboxProperty,
   createEmailProperty,
@@ -8,7 +9,7 @@ import {
   createSelectProperty,
   createDateProperty,
   createRelationProperty,
-} from "@/converters/notion-properties";
+} from "@/converters/utils";
 
 export function stripeDisputeToNotionProperties(
   dispute: Stripe.Dispute,
@@ -17,6 +18,7 @@ export function stripeDisputeToNotionProperties(
 ) {
   const properties: Record<string, any> = {
     "Dispute ID": createTitleProperty(dispute.id),
+    "Link": createSearchLinkProperty(dispute.livemode, dispute.id),
     Amount: createNumberProperty(dispute.amount),
     Currency: createRichTextProperty(dispute.currency?.toUpperCase()),
     Status: createSelectProperty(dispute.status),
